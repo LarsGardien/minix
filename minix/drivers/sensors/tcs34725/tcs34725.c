@@ -92,24 +92,13 @@ static int
 tcs34725_read8(uint16_t reg, uint8_t *value)
 {
 	int r;
-	if((r = i2creg_read8(bus_endpoint, address,
-				TCS34725_COMMAND_BIT | reg, value)) != OK)
+	if((r = i2creg_raw_write8(bus_endpoint, address, TCS34725_COMMAND_BIT | reg)) != OK)
 	{
-		log_warn(&log, "Failed to read value from device.\n");
+		log_warn(&log, "Failed to write command to device.\n");
 		return -1;
 	}
 
-	return OK;
-}
-
-static int
-tcs34725_read16(uint16_t reg, uint16_t *value)
-{
-	int r;
-	uint16_t val;
-
-	if((r = i2creg_read16(bus_endpoint, address,
-					TCS34725_COMMAND_BIT | reg, &val)) != OK)
+	if((r = i2creg_raw_read8(bus_endpoint, address, value)) != OK)
 	{
 		log_warn(&log, "Failed to read value from device.\n");
 		return -1;
@@ -140,10 +129,14 @@ tcs34725_read(devminor_t UNUSED(minor), u64_t position, endpoint_t endpt,
 	uint16_t c = 0, r = 0, g = 0, b = 0;
 	printf("tcs34725 read\n");
 
-	uint8_t cmd[1] = {TCS34725_COMMAND_BIT | TCS34725_CDATAL};
+	if((ret = i2creg_raw_write8(bus_endpoint, address, TCS34725_COMMAND_BIT | TCS34725_CDATAL)) != OK)
+	{
+		log_warn(&log, "Failed to write command to device.\n");
+		return -1;
+	}
+
 	uint8_t rgbc[8];
-	ret = i2creg_read(bus_endpoint, address, cmd, 1, rgbc, 8);
-	if(ret != OK)
+	if((ret = i2creg_read(bus_endpoint, address, NULL, 0, rgbc, 8)) != OK)
 	{
 		log_warn(&log, "Failed to read from device.\n");
 		return -1;
