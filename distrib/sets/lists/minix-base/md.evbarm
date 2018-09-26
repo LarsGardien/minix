@@ -13,6 +13,7 @@
 ./etc/system.conf.d/lan8710a                            minix-base
 ./etc/system.conf.d/sht21                               minix-base
 ./etc/system.conf.d/tsl2550                             minix-base
+./etc/system.conf.d/tcs34725                            minix-base
 ./etc/system.conf.d/usbd                                minix-base
 ./service/bmp085                                        minix-base
 ./service/cat24c256                                     minix-base
@@ -28,6 +29,7 @@
 ./service/tps65217                                      minix-base
 ./service/tps65950                                      minix-base
 ./service/tsl2550                                       minix-base
+./service/tcs34725                                      minix-base
 ./service/usbd                                          minix-base
 ./usr/bin/eepromread                                    minix-base
 ./usr/lib/libc_vfp.a                                    minix-base      obsolete

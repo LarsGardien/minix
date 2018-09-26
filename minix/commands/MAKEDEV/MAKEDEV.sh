@@ -45,6 +45,7 @@ STD_DEVICES="
 	klog ptmx random
 	sht21b1s40 sht21b2s40 sht21b3s40
 	tsl2550b1s39 tsl2550b2s39 tsl2550b3s39
+	tcs34725b1s29 tcs34725b2s29 tcs34725b3s29
 	ttyp0 ttyp1 ttyp2 ttyp3 ttyp4 ttyp5 ttyp6 ttyp7 ttyp8 ttyp9
 	ttypa ttypb ttypc ttypd ttype ttypf
 	ttyq0 ttyq1 ttyq2 ttyq3 ttyq4 ttyq5 ttyq6 ttyq7 ttyq8 ttyq9
@@ -115,6 +116,7 @@ Where key is one of the following:
   fb0			  # Make /dev/fb0
   i2c-1 i2c-2 i2c-3       # Make /dev/i2c-[1-3]
   tsl2550b{1,3}s39	  # TSL2550 Ambient Light Sensors
+	tcs34725{1,3}s29		# TCS34725 Color Sensors
   sht21b{1,3}s40	  # SHT21 Relative Humidity and Temperature Sensors
   bmp085b{1,3}s77	  # BMP085 Pressure and Temperature Sensors
   fd0 fd1 ...		  # Floppy devices for drive 0, 1, ...
@@ -400,6 +402,13 @@ do
 		major=`expr ${bus} + 46`
 
 		makedev tsl2550b${bus}s39 c ${major} 0 ${uname} ${gname} 444
+		;;
+	tcs34725b[1-3]s29)
+		# Color Sensor
+		bus=`expr ${dev} : 'tcs34725b\\(.*\\)s29'`
+		major=`expr ${bus} + 134`
+
+		makedev tcs34725b${bus}s29 c ${major} 0 ${uname} ${gname} 444
 		;;
 	tty0[0-3])
 		# Serial lines.

@@ -79,7 +79,11 @@
 #define USB_BASE_MAJOR		  65	/* 65-133 = USB major range	      */
 #define PCI_MAJOR		 134	/* 134 = /dev/pci (pci)            */
 
-#define NR_DEVICES   		 135	/* number of (major) devices */
+#define TCS34725B1S29_MAJOR	  135	/* 135 = /dev/tcs34725b1s29 (tcs34725)   */
+#define TCS34725B2S29_MAJOR	  136	/* 136 = /dev/tcs34725b2s29 (tcs34725)   */
+#define TCS34725B3S29_MAJOR	  137	/* 137 = /dev/tcs34725b3s29 (tcs34725)   */
+
+#define NR_DEVICES   		 138	/* number of (major) devices */
 
 /* Minor device numbers for memory driver. */
 #  define RAM_DEV_OLD  		   0	/* minor device for /dev/ram */
