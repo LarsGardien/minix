@@ -37,14 +37,14 @@ static int tcs34725_read8(uint16_t address, uint8_t *value);
 static int tcs34725_write8(uint16_t address, uint8_t value);
 
 /* libchardriver callbacks */
-static ssize_t tcs34725_read(devminor_t minor, u64_t position, endpoint_t endpt,
+static ssize_t tcs34725_read_hook(devminor_t minor, u64_t position, endpoint_t endpt,
     cp_grant_id_t grant, size_t size, int flags, cdev_id_t id);
-static void tcs34725_other(message * m, int ipc_status);
+static void tcs34725_other_hook(message * m, int ipc_status);
 
 /* Entry points to this driver from libchardriver. */
 static struct chardriver tcs34725_tab = {
-	.cdr_read		= tcs34725_read,
-	.cdr_other	= tcs34725_other
+	.cdr_read		= tcs34725_read_hook,
+	.cdr_other	= tcs34725_other_hook
 };
 
 static int
@@ -92,18 +92,12 @@ static int
 tcs34725_read8(uint16_t reg, uint8_t *value)
 {
 	int r;
-	if((r = i2creg_raw_write8(bus_endpoint, address, TCS34725_COMMAND_BIT | reg)) != OK)
-	{
-		log_warn(&log, "Failed to write command to device.\n");
-		return -1;
-	}
-
-	if((r = i2creg_raw_read8(bus_endpoint, address, value)) != OK)
+	uint8_t command[] = {TCS34725_COMMAND_BIT | reg};
+	if((r = i2creg_read(bus_endpoint, address, command, 1, value, 1)) != OK)
 	{
 		log_warn(&log, "Failed to read value from device.\n");
 		return -1;
 	}
-
 	return OK;
 }
 
@@ -117,26 +111,20 @@ tcs34725_write8(uint16_t reg, uint8_t value)
 		log_warn(&log, "Failed to write command to device.\n");
 		return -1;
 	}
-
 	return OK;
 }
 
 static ssize_t
-tcs34725_read(devminor_t UNUSED(minor), u64_t position, endpoint_t endpt,
+tcs34725_read_hook(devminor_t UNUSED(minor), u64_t position, endpoint_t endpt,
     cp_grant_id_t grant, size_t size, int UNUSED(flags), cdev_id_t UNUSED(id))
 {
 	int ret;
 	uint16_t c = 0, r = 0, g = 0, b = 0;
 	printf("tcs34725 read\n");
 
-	if((ret = i2creg_raw_write8(bus_endpoint, address, TCS34725_COMMAND_BIT | TCS34725_CDATAL)) != OK)
-	{
-		log_warn(&log, "Failed to write command to device.\n");
-		return -1;
-	}
-
 	uint8_t rgbc[8];
-	if((ret = i2creg_read(bus_endpoint, address, NULL, 0, rgbc, 8)) != OK)
+	uint8_t command[] = {TCS34725_COMMAND_BIT | TCS34725_CDATAL};
+	if((ret = i2creg_read(bus_endpoint, address, command, 1, rgbc, 8)) != OK)
 	{
 		log_warn(&log, "Failed to read from device.\n");
 		return -1;
@@ -151,7 +139,7 @@ tcs34725_read(devminor_t UNUSED(minor), u64_t position, endpoint_t endpt,
 }
 
 static void
-tcs34725_other(message * m, int ipc_status)
+tcs34725_other_hook(message * m, int ipc_status)
 {
 	int r;
 

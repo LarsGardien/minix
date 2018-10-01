@@ -216,6 +216,7 @@ i2creg_read(endpoint_t bus_endpoint, i2c_addr_t address, uint8_t *cmd,
 	if (cmdlen > 0) {
 		/* write the register address */
 		memcpy(ioctl_exec.iie_cmd, cmd, cmdlen);
+		ioctl_exec.iie_cmdlen = cmdlen;
 	}
 
 	/* read vallen bytes */
