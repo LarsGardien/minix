@@ -18,6 +18,9 @@ void i2cdriver_handle_bus_update(endpoint_t * bus_endpoint, uint32_t bus,
 int i2cdriver_reserve_device(endpoint_t bus_endpoint, i2c_addr_t address);
 int i2cdriver_exec(endpoint_t bus_endpoint, minix_i2c_ioctl_exec_t *ioctl_exec);
 
+int i2cdriver_mux_select(endpoint_t mux_endpoint, uint8_t channel);
+int i2cdriver_mux_deselect(endpoint_t mux_endpoint, uint8_t channel);
+
 int i2creg_raw_read8(endpoint_t bus, i2c_addr_t addr, uint8_t * val);
 int i2creg_read8(endpoint_t bus, i2c_addr_t addr, uint8_t reg, uint8_t * val);
 int i2creg_read16(endpoint_t bus, i2c_addr_t addr, uint8_t reg, uint16_t * val);

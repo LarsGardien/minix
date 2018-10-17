@@ -12,6 +12,7 @@
 ./etc/system.conf.d/i2c                                 minix-base
 ./etc/system.conf.d/lan8710a                            minix-base
 ./etc/system.conf.d/sht21                               minix-base
+./etc/system.conf.d/tca9548a                            minix-base
 ./etc/system.conf.d/tsl2550                             minix-base
 ./etc/system.conf.d/usbd                                minix-base
 ./service/bmp085                                        minix-base
@@ -24,6 +25,7 @@
 ./service/mmc                                           minix-base
 ./service/random                                        minix-base
 ./service/sht21                                         minix-base
+./service/tca9548a                                      minix-base
 ./service/tda19988                                      minix-base
 ./service/tps65217                                      minix-base
 ./service/tps65950                                      minix-base

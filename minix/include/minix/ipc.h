@@ -7,9 +7,9 @@
 #include <sys/signal.h>
 #include <sys/types.h>
 
-/*==========================================================================* 
+/*==========================================================================*
  * Types relating to messages. 						    *
- *==========================================================================*/ 
+ *==========================================================================*/
 
 #define M_PATH_STRING_MAX  40
 #define CTL_SHORTNAME 8 /* max sysctl(2) name length that fits in message */
@@ -229,6 +229,11 @@ typedef struct {
 	uint8_t padding[56];
 } mess_i2c_li2cdriver_busc_i2c_reserve;
 _ASSERT_MSG_SIZE(mess_i2c_li2cdriver_busc_i2c_reserve);
+
+typedef struct {
+	uint8_t padding[56];
+} mess_i2c_li2cdriver_busc_i2c_mux;
+_ASSERT_MSG_SIZE(mess_i2c_li2cdriver_busc_i2c_mux);
 
 typedef struct {
 	int kbd_id;
@@ -988,6 +993,12 @@ typedef struct {
 	uint8_t padding[54];
 } mess_li2cdriver_i2c_busc_i2c_reserve;
 _ASSERT_MSG_SIZE(mess_li2cdriver_i2c_busc_i2c_reserve);
+
+typedef struct {
+	uint8_t channel;
+	uint8_t padding[55];
+} mess_li2cdriver_i2c_busc_i2c_mux;
+_ASSERT_MSG_SIZE(mess_li2cdriver_i2c_busc_i2c_mux);
 
 typedef struct {
 	int id;
@@ -2431,6 +2442,7 @@ typedef struct noxfer_message {
 		mess_fs_vfs_readwrite	m_fs_vfs_readwrite;
 		mess_i2c_li2cdriver_busc_i2c_exec m_i2c_li2cdriver_busc_i2c_exec;
 		mess_i2c_li2cdriver_busc_i2c_reserve m_i2c_li2cdriver_busc_i2c_reserve;
+		mess_i2c_li2cdriver_busc_i2c_mux m_i2c_li2cdriver_busc_i2c_mux;
 		mess_input_linputdriver_input_conf m_input_linputdriver_input_conf;
 		mess_input_linputdriver_setleds m_input_linputdriver_setleds;
 		mess_input_tty_event	m_input_tty_event;
@@ -2514,6 +2526,7 @@ typedef struct noxfer_message {
 		mess_lexec_pm_exec_new	m_lexec_pm_exec_new;
 		mess_li2cdriver_i2c_busc_i2c_exec m_li2cdriver_i2c_busc_i2c_exec;
 		mess_li2cdriver_i2c_busc_i2c_reserve m_li2cdriver_i2c_busc_i2c_reserve;
+		mess_li2cdriver_i2c_busc_i2c_mux m_li2cdriver_i2c_busc_i2c_mux;
 		mess_linputdriver_input_event m_linputdriver_input_event;
 		mess_lsockdriver_vfs_accept_reply
 		    m_lsockdriver_vfs_accept_reply;
@@ -2737,9 +2750,9 @@ typedef int _ASSERT_message[/* CONSTCOND */sizeof(message) == 64 ? 1 : -1];
 #define m10_ull1 m_m10.m10ull1
 
 
-/*==========================================================================* 
+/*==========================================================================*
  * Minix run-time system (IPC). 					    *
- *==========================================================================*/ 
+ *==========================================================================*/
 
 /* Datastructure for asynchronous sends */
 typedef struct asynmsg
