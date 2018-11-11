@@ -10,6 +10,7 @@
 ./etc/system.conf.d/bmp085                              minix-base
 ./etc/system.conf.d/gpio                                minix-base
 ./etc/system.conf.d/i2c                                 minix-base
+./etc/system.conf.d/mux_i2c                             minix-base
 ./etc/system.conf.d/lan8710a                            minix-base
 ./etc/system.conf.d/sht21                               minix-base
 ./etc/system.conf.d/tca9548a                            minix-base
@@ -21,6 +22,7 @@
 ./service/fb                                            minix-base
 ./service/gpio                                          minix-base
 ./service/i2c                                           minix-base
+./service/mux_i2c                                       minix-base
 ./service/lan8710a                                      minix-base
 ./service/mmc                                           minix-base
 ./service/random                                        minix-base
