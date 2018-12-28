@@ -50,8 +50,8 @@ static int process_init(int type, sef_init_info_t *info)
   /* Debug. */
 #if SEF_INIT_DEBUG
   sef_init_debug_begin();
-  sef_init_dprint("%s. Got a SEF Init request of type %d, flags 0x%08x, rproctab_gid %d, ep %d, old ep %d, restarts %d. About to init.\n",
-      sef_debug_header(), type, info->flags, info->rproctab_gid, info->endpoint, info->old_endpoint, info->restarts);
+  sef_init_dprint("%s. Got a SEF Init request of type %d, flags 0x%08x, rproctab_gid %d, ep %d, old ep %d, restarts %d, prepare_state: %d. About to init.\n",
+      sef_debug_header(), type, info->flags, info->rproctab_gid, info->endpoint, info->old_endpoint, info->restarts, info->prepare_state);
   sef_init_debug_end();
 #endif
 
@@ -61,6 +61,7 @@ static int process_init(int type, sef_init_info_t *info)
 
   /* Create grant for state transfer. */
   gid = cpf_grant_direct(sef_self_endpoint, 0, ULONG_MAX, CPF_READ);
+  printf("process_init: gid: %d. sef_self: %d\n", gid, sef_self_endpoint);
   if(!GRANT_VALID(gid)) {
       panic("unable to create grant for state transfer");
   }
@@ -445,7 +446,7 @@ int sef_cb_init_lu_generic(int type, sef_init_info_t *info)
 
   /* Resort to restart callback for identity updates. */
   if(SEF_LU_IS_IDENTITY_UPDATE(info->flags)) {
-      return sef_cb_init_lu_identity_as_restart(type, info); 
+      return sef_cb_init_lu_identity_as_restart(type, info);
   }
 
   /* Perform state transfer updates in all the other cases. */

@@ -131,6 +131,7 @@ void sef_startup()
       } while(!IS_SEF_INIT_REQUEST(&m, status));
 
       /* Process initialization request for this system service. */
+      printf("doing sef_init_request\n");
       if((r = do_sef_init_request(&m)) != OK) {
           panic("unable to process init request: %d", r);
       }
@@ -397,4 +398,3 @@ char* sef_debug_header(void)
   return sef_debug_header_buff;
 }
 #endif /*SEF_INIT_DEBUG || SEF_LU_DEBUG || SEF_PING_DEBUG || SEF_SIGNAL_DEBUG*/
-

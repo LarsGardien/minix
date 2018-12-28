@@ -30,14 +30,14 @@ static int check_reservation(endpoint_t endpt, int slave_addr);
 static void update_reservation(endpoint_t endpt, char *key);
 static void ds_event(void);
 
-static int do_i2c_ioctl_exec(endpoint_t caller, cp_grant_id_t grant_nr);
+static int do_mux_i2c_ioctl_exec(endpoint_t caller, cp_grant_id_t grant_nr);
 
 static int env_parse_muxinstance(void);
 
 /* libchardriver callbacks */
-static int i2c_ioctl(devminor_t minor, unsigned long request, endpoint_t endpt,
+static int mux_i2c_ioctl(devminor_t minor, unsigned long request, endpoint_t endpt,
 	cp_grant_id_t grant, int flags, endpoint_t user_endpt, cdev_id_t id);
-static void i2c_other(message * m, int ipc_status);
+static void mux_i2c_other(message * m, int ipc_status);
 
 static endpoint_t mux_endpoint = NONE;
 static endpoint_t parent_bus_endpoint = NONE;
@@ -63,8 +63,8 @@ static struct log log = {
  * Only i2c_ioctl() and i2c_other() are implemented. The rest are no-op.
  */
 static struct chardriver i2c_tab = {
-	.cdr_ioctl	= i2c_ioctl,
-	.cdr_other	= i2c_other
+	.cdr_ioctl	= mux_i2c_ioctl,
+	.cdr_other	= mux_i2c_other
 };
 
 static int
@@ -72,6 +72,8 @@ sef_cb_lu_state_save(int UNUSED(result), int UNUSED(flags))
 {
 	int r;
 	char key[DS_MAX_KEYLEN];
+
+	printf("in sef_cb_lu_state_save\n" );
 
 	memset(key, '\0', DS_MAX_KEYLEN);
 	snprintf(key, DS_MAX_KEYLEN, "i2c.%d.i2cdev", i2c_bus_id + 1);
@@ -82,6 +84,7 @@ sef_cb_lu_state_save(int UNUSED(result), int UNUSED(flags))
 	}
 
 	log_debug(&log, "State Saved\n");
+	printf("exit sef_cb_lu_state_save\n" );
 
 	return OK;
 }
@@ -199,7 +202,7 @@ update_reservation(endpoint_t endpt, char *key)
 }
 
 static int
-do_i2c_ioctl_exec(endpoint_t caller, cp_grant_id_t grant_nr)
+do_mux_i2c_ioctl_exec(endpoint_t caller, cp_grant_id_t grant_nr)
 {
 	int r;
 	message m;
@@ -238,7 +241,7 @@ do_i2c_ioctl_exec(endpoint_t caller, cp_grant_id_t grant_nr)
 }
 
 static int
-i2c_ioctl(devminor_t UNUSED(minor), unsigned long request, endpoint_t endpt,
+mux_i2c_ioctl(devminor_t UNUSED(minor), unsigned long request, endpoint_t endpt,
 	cp_grant_id_t grant, int UNUSED(flags), endpoint_t UNUSED(user_endpt),
 	cdev_id_t UNUSED(id))
 {
@@ -246,7 +249,7 @@ i2c_ioctl(devminor_t UNUSED(minor), unsigned long request, endpoint_t endpt,
 
 	switch (request) {
 	case MINIX_I2C_IOCTL_EXEC:
-		r = do_i2c_ioctl_exec(endpt, grant);
+		r = do_mux_i2c_ioctl_exec(endpt, grant);
 		break;
 	default:
 		log_warn(&log, "Invalid ioctl() 0x%x\n", request);
@@ -258,7 +261,7 @@ i2c_ioctl(devminor_t UNUSED(minor), unsigned long request, endpoint_t endpt,
 }
 
 static void
-i2c_other(message * m, int ipc_status)
+mux_i2c_other(message * m, int ipc_status)
 {
 	message m_reply;
 	int r;
@@ -278,7 +281,7 @@ i2c_other(message * m, int ipc_status)
 		break;
 	case BUSC_I2C_EXEC:
 		/* handle request from another driver */
-		r = do_i2c_ioctl_exec(m->m_source, m->m_li2cdriver_i2c_busc_i2c_exec.grant);
+		r = do_mux_i2c_ioctl_exec(m->m_source, m->m_li2cdriver_i2c_busc_i2c_exec.grant);
 		break;
 	default:
 		log_warn(&log, "Invalid message type (0x%x)\n", m->m_type);
@@ -286,7 +289,7 @@ i2c_other(message * m, int ipc_status)
 		break;
 	}
 
-	log_trace(&log, "i2c_other() returning r=%d\n", r);
+	log_trace(&log, "mux_i2c_other() returning r=%d\n", r);
 
 	/* Send a reply. */
 	memset(&m_reply, 0, sizeof(m_reply));
@@ -338,6 +341,8 @@ lu_state_restore(void)
 	char key[DS_MAX_KEYLEN];
 	size_t size;
 
+	printf("in lu_state_restore\n");
+
 	env_parse_muxinstance();
 
 	size = sizeof(i2cdev);
@@ -352,6 +357,8 @@ lu_state_restore(void)
 	}
 
 	log_debug(&log, "State Restored\n");
+
+	printf("exit lu_state_restore\n");
 
 	return OK;
 }
@@ -432,9 +439,9 @@ env_parse_muxinstance(void)
 	i2c_bus_id = instance - 1;
 
 	parent_bus = 0;
-	r = env_parse("bus", "d", 0, &parent_bus, 1, 11);
+	r = env_parse("parent-instance", "d", 0, &parent_bus, 1, 11);
 	if (r == -1) {
-		log_warn(&log, "Expecting '-arg bus=N' argument.\n");
+		log_warn(&log, "Expecting '-arg parent-instance=N' argument.\n");
 		return EXIT_FAILURE;
 	}
 	parent_bus_endpoint = i2cdriver_bus_endpoint(parent_bus);
@@ -477,7 +484,7 @@ main(int argc, char *argv[])
 		return r;
 	}
 
-	printf("instance: %d; busEP: %d; channel: %d; muxEP: %d\n",
+	printf("instance: %d; parentEP: %d; channel: %d; muxEP: %d\n",
 					i2c_bus_id+1,
 					parent_bus_endpoint,
 					channel,

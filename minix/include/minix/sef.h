@@ -103,7 +103,7 @@ int sef_cb_init_response_rs_asyn_once(message *m_ptr);
 #define SEF_INIT_ST                  0x20    /* force state transfer init */
 
 /* Debug. */
-#define SEF_INIT_DEBUG_DEFAULT 		0
+#define SEF_INIT_DEBUG_DEFAULT 		1
 #define SEF_INIT_ALLOW_DEBUG_INIT_FLAGS 1
 
 #ifndef SEF_INIT_DEBUG
@@ -384,4 +384,3 @@ int sef_llvm_ltckpt_restart(int type, sef_init_info_t *info);
 #endif
 
 #endif /* _SEF_H */
-
