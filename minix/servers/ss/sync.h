@@ -18,21 +18,21 @@ typedef struct TransitionStringItem {
 } TransitionStringItem;
 
 typedef struct SensitivityItem {
-	struct SensitivityItem next_proc_item;	/*used by update sensitivity*/
-	struct SensitivityItem next_transition_item; /*used by sync transition*/
+	struct SensitivityItem *next_proc_item;	/*used by update sensitivity*/
+	struct SensitivityItem *next_transition_item; /*used by sync transition*/
 	endpoint_t ep;
 	int transition_index;
 	bool sensitive;
 } SensitivityItem;
 
 typedef struct ProcessItem{
-	struct ProcessItem next_item;
+	struct ProcessItem *next_item;
 	endpoint_t ep;
 	SensitivityItem *process_sensitivities; /*iterate sensitivities for proc*/
 } ProcessItem;
 
 typedef struct TransitionItem{
-	struct TransitionItem next_item;
+	struct TransitionItem *next_item;
 	int transition_index;
 	SensitivityItem *transition_sensitivities; /*iterate sensitivities for transition*/
 } TransitionItem;

@@ -6,7 +6,7 @@ static TransitionItem *transitions;
 
 /***
 *Checks if a given prefix-action combination is already known. if known: sets p:transition_index
-*to the known index and returns SS_EXIST if not known. Creates a new TransitionItem sets the
+*to the known index and returns SS_EXIST. If not known: creates a new TransitionItem sets the
 *p:transition_index to the prev + 1 and returns SS_INSERT.
 */
 static int
@@ -117,15 +117,15 @@ insert_transition_sensitivity(SensitivityItem *sensitivity)
 }
 
 /***
-*Adds a transition to a process alphabet. First reserves transition string (might)
+*Adds a transition to a process alphabet. First reserves transition string. Might
 *be reserved already. Then creates a sensitivity and inserts it into the process
 sensitivities and transition sensitivities linked lists.
 */
 static int
-add_alphabet(endpoint_t proc, char *prefix, char *action)
+add_alphabet(endpoint_t proc, char *prefix, char *action, int *transition_index)
 {
   /*Check if transition is already reserved*/
-  r = insert_transition_string(prefix, action, &transition_index);
+  r = insert_transition_string(prefix, action, transition_index);
 	if(r < 0){
 		printf("SS: failed to insert %s.%s into transition_strings.\n", prefix, action);
 		return r;
@@ -143,7 +143,7 @@ add_alphabet(endpoint_t proc, char *prefix, char *action)
   new_sensitivity->next_proc_item = NULL;
   new_sensitivity->next_transition_item = NULL;
   new_sensitivity->ep = proc;
-  new_sensitivity->transition_index = transition_index;
+  new_sensitivity->transition_index = *transition_index;
   new_sensitivity->sensitive = false;
 
   /*Insert into correct process_sensitivities*/
@@ -264,7 +264,7 @@ do_add_alphabet(message *m_ptr)
 		panic("SS: prefix safecopy failed.\n");
 	}
 
-  r = add_alphabet(m_ptr->m_source, prefix, action);
+  r = add_alphabet(m_ptr->m_source, prefix, action, &transition_index);
   if(r != OK){
     printf("SS: add_alphabet failed.\n");
     return r;
@@ -287,7 +287,7 @@ do_update_sensitivity(message *m_ptr)
   if(r != OK){
     printf("SS: update_sensitivity failed.\n");
     return r;
-  }
+  }next_transition_item;
 
   return OK;
 }
