@@ -117,18 +117,20 @@ _ASSERT_MSG_SIZE(mess_ds_req);
 
 typedef struct {
 	int transition_index;
+	bool sensitive;
 	cp_grant_id_t prefix_grant;
-	uint8_t prefix_strlen
+	size_t prefix_strlen;
 	cp_grant_id_t action_grant;
-	uint8_t action_strlen;
-	uint8_t padding[TODO];
+	size_t action_strlen;
+
+	uint8_t padding[35];
 } mess_ss_req;
 _ASSERT_MSG_SIZE(mess_ss_req);
 
 typedef struct {
-	int status;
 	int transition_index;
-	uint8_t padding[TODO];
+
+	uint8_t padding[52];
 } mess_ss_reply;
 _ASSERT_MSG_SIZE(mess_ss_reply);
 

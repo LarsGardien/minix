@@ -56,7 +56,7 @@ int main(int argc, char **argv)
       case SS_SYNCHRONIZE:
           result = do_synchronize_action(&m);
       default:
-          printf("DS: warning, got illegal request from %d\n", m.m_source);
+          printf("SS: warning, got illegal request from %d\n", m.m_source);
           result = EINVAL;
       }
 
