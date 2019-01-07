@@ -53,8 +53,8 @@ int main(int argc, char **argv)
       case SS_SENSITIVITY:
           result = do_update_sensitivity(&m);
           break;
-      case SS_SYNCHRONIZE:
-          result = do_synchronize_action(&m);
+      case SS_SYNCHRONISE:
+          result = do_synchronise_transition(&m);
       default:
           printf("SS: warning, got illegal request from %d\n", m.m_source);
           result = EINVAL;

@@ -9,7 +9,7 @@ make_hdimage()
 	rootsects=`expr $rootsize / 512`
 	usrsects=`expr $usrsize / 512`
 
-	# installboot -m needs at least 1KB 
+	# installboot -m needs at least 1KB
 	dd < /dev/zero >tmpimage count=2
 	partition -fm tmpimage 2 81:$rootsects* 0:0 81:$usrsects
 	installboot_nbsd -m tmpimage /usr/mdec/mbr
@@ -81,7 +81,8 @@ load=/mod08_mib
 load=/mod09_vm
 load=/mod10_pfs
 load=/mod11_mfs
-load=/mod12_init
+load/=mod12_ss
+load=/mod13_init
 # This space intentionally left blank - leave to appease bootloader!
 # This space intentionally left blank - leave to appease bootloader!
 # This space intentionally left blank - leave to appease bootloader!
@@ -109,7 +110,7 @@ copy_local_packages()
 	then
 		index=pkg_summary
 		indexpath=$PACKAGEDIR/.index
-	
+
 		if [ ! -d $indexpath ]
 		then	mkdir $indexpath
 		fi
@@ -117,9 +118,9 @@ copy_local_packages()
 		then	echo "Couldn't create $indexpath."
 			exit 1
 		fi
-	
+
 		echo "" >$PACKAGEDIR/All/$index
-	
+
 	        echo " * Transfering $PACKAGEDIR to $RELEASEPACKAGE"
 	        for pkgprefix in `cat $PACKAGELIST`
 	        do	realfn="`echo $PACKAGEDIR/All/${pkgprefix}*.tgz`"
@@ -130,28 +131,28 @@ copy_local_packages()
 			      p="`basename $realfn`"
 			      cd $PACKAGEDIR/All
 			      cp $p $RELEASEPACKAGE/
-	
+
 			      indexname=$indexpath/$p.$index
 			      pkg_info -X $p >$indexname
-	
+
 			      if [ ! -f $indexname ]
 			      then	echo Missing $indexname.
 				  exit 1
 			      fi
-	
+
 			      if [ "`wc -l <$indexname`" -lt 3 ]
 			      then	$indexname is too short.
 				  rm $indexname
 				  exit 1
 			      fi
-	
+
 			      cat $indexname >>$PACKAGEDIR/All/$index
 			  )
 	               else
 	                  echo "Can't find $pkgprefix Missing."
 	               fi
 	        done
-	
+
 		bzip2 -f $PACKAGEDIR/All/$index
 		cp $PACKAGEDIR/All/$index.bz2 $RELEASEPACKAGE/
 	fi

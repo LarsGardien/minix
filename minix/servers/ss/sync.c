@@ -1,4 +1,5 @@
 #include "inc.h"
+#include "sync.h"
 
 static TransitionStringItem *transition_strings;
 static ProcessItem *processes;
@@ -52,23 +53,21 @@ insert_transition_string(char *prefix, char *action, int *transition_index)
 *already. Adds the sensitivity to the linked list.
 */
 static int
-insert_process_sensitivity(endpoint_t ep, SensitivityItem *sensitivity)
+insert_process_sensitivity(SensitivityItem *sensitivity)
 {
-  SensitivityItem *sp, *prev_sp;
-  ProcessItem *xp = processes;
+  SensitivityItem *sp = NULL, *prev_sp = NULL;
+  ProcessItem *xp = NULL;
   /*Iterate processes until ep found.*/
-  while(xp && xp->ep != ep && xp = xp->next_item);
+  for(xp = processes; xp && xp->ep != sensitivity->ep; xp = xp->next_item);
   if(!xp){
-    printf("SS: insert_process_sensitivity: Could not find ep:%d in processes.\n");
+    printf("SS: insert_process_sensitivity: Could not find ep:%d "\
+      "in processes.\n", sensitivity->ep);
     return -1;
   }
 
   /*iterate ep's sensitivities until tail found*/
-  sp = xp->process_sensitivities;
-  while(sp && sp->transition_index != sensitivity->transition_index){
-    prev_sp = sp;
-    sp = sp->next_proc_item;
-  }
+  for(sp = xp->process_sensitivities; sp && sp->transition_index
+    != sensitivity->transition_index; prev_sp = sp, sp = sp->next_proc_item);
   if(sp->transition_index == sensitivity->transition_index){
     printf("SS: insert_process_sensitivity: TransitionIndex already exists.\n");
     return -1;
@@ -90,25 +89,22 @@ insert_process_sensitivity(endpoint_t ep, SensitivityItem *sensitivity)
 static int
 insert_transition_sensitivity(SensitivityItem *sensitivity)
 {
-  SensitivityItem *sp, *prev_sp;
-  TransitionItem *tp = transitions;
+  SensitivityItem *sp = NULL, *prev_sp = NULL;
+  TransitionItem *tp = NULL;
   /*iterate transitions until correct index found.*/
-  while(tp && tp->transition_index != sensitivity->transition_index &&
-        tp = tp->next_item);
+  for(tp = transitions; tp && tp->transition_index
+      != sensitivity->transition_index; tp = tp->next_item);
   if(!tp){
-    printf("SS: insert_transition_sensitivity: Could not find transition_index:%d in transitions.\n");
+    printf("SS: insert_transition_sensitivity: Could not find "\
+      "transition_index:%d in transitions.\n", sensitivity->transition_index);
     return -1;
   }
 
   /*iterate transition_sensitivities until tail*/
-  sp = xp->transition_sensitivities;
-  while(sp){
-    prev_sp = sp;
-    sp = sp->next_proc_item;
-  }
-
+  for(sp = tp->transition_sensitivities; sp; prev_sp = sp,
+        sp = sp->next_proc_item);
   if(!prev_sp){ /*insert empty list*/
-    xp->transition_sensitivities = sensitivity;
+    tp->transition_sensitivities = sensitivity;
   } else if(prev_sp){ /*insert tail*/
     prev_sp->next_proc_item = sensitivity;
   }
@@ -124,10 +120,12 @@ sensitivities and transition sensitivities linked lists.
 static int
 add_alphabet(endpoint_t proc, char *prefix, char *action, int *transition_index)
 {
+  int r;
   /*Check if transition is already reserved*/
   r = insert_transition_string(prefix, action, transition_index);
 	if(r < 0){
-		printf("SS: failed to insert %s.%s into transition_strings.\n", prefix, action);
+		printf("SS: failed to insert %s.%s into transition_strings.\n",
+      prefix, action);
 		return r;
 	}
 	else if(r == SS_EXIST){ /*r=0 means transition already existed, preform cleanup*/
@@ -147,16 +145,18 @@ add_alphabet(endpoint_t proc, char *prefix, char *action, int *transition_index)
   new_sensitivity->sensitive = false;
 
   /*Insert into correct process_sensitivities*/
-  r = insert_process_sensitivity(m_ptr->m_source, new_sensitivity);
+  r = insert_process_sensitivity(new_sensitivity);
   if(r != OK){
-    printf("SS: failed to insert %s.%s into process_sensitivities\n", prefix, action);
+    printf("SS: failed to insert %s.%s into process_sensitivities\n",
+      prefix, action);
     return r;
   }
 
   /*Insert into correct transition_sensitivities*/
-  r = insert_transition_sensitivity(m_ptr->m_source, new_sensitivity);
+  r = insert_transition_sensitivity(new_sensitivity);
   if(r != OK){
-    printf("SS: failed to insert %s.%s into transition_sensitivities\n", prefix, action);
+    printf("SS: failed to insert %s.%s into transition_sensitivities\n",
+      prefix, action);
     return r;
   }
 
@@ -171,21 +171,18 @@ add_alphabet(endpoint_t proc, char *prefix, char *action, int *transition_index)
 static int
 update_sensitivity(endpoint_t ep, int transition_index, bool sensitive)
 {
-  SensitivityItem *sp, *prev_sp = NULL;
+  SensitivityItem *sp = NULL, *prev_sp = NULL;
+  ProcessItem *xp = NULL;
   /*find the process in processses*/
-  ProcessItem *xp = processes;
-  while(xp && xp->ep != ep && xp = xp->next_item);
+  for(xp = processes; xp && xp->ep != ep; xp = xp->next_item);
   if(!xp){
-    printf("SS: update_sensitivity: could not find ep:%d in processes.\n");
+    printf("SS: update_sensitivity: could not find ep:%d in processes.\n", ep);
     return -1;
   }
 
   /*find the transition in process_sensitivities.*/
-  sp = xp->process_sensitivities;
-  while(sp && sp->transition_index != transition_index){
-    prev_sp = sp;
-    sp = sp->next_proc_item;
-  }
+  for(sp = xp->process_sensitivities; sp && sp->transition_index
+    != transition_index; prev_sp = sp, sp = sp->next_proc_item);
   if(!prev_sp){
     printf("SS: update_sensitivity: could not find transition_index:%d for ep:%d.\n",
             transition_index, ep);
@@ -193,6 +190,8 @@ update_sensitivity(endpoint_t ep, int transition_index, bool sensitive)
   }
   /*update the sensitivity*/
   prev_sp->sensitive = sensitive;
+
+  return OK;
 }
 
 /***
@@ -201,12 +200,14 @@ update_sensitivity(endpoint_t ep, int transition_index, bool sensitive)
 *the transition. Finalloy, notifies all relevant processes.
 */
 static int
-synchronize_transition(int transition_index)
+synchronise_transition(int transition_index)
 {
-  SensitivityItem *sp;
+  message m;
+  SensitivityItem *sp = NULL;
+  TransitionItem *tp = NULL;
   /*Find the correct transition in transitions.*/
-  TransitionItem *tp = transitions;
-  while(tp && tp->transition_index != transition_index && tp = tp->next_item);
+  for(tp = transitions; tp && tp->transition_index != transition_index;
+        tp = tp->next_item);
   if(!tp){
     printf("SS: synchronize_transition: could not find transition_index:%d.\n",
       transition_index);
@@ -214,19 +215,20 @@ synchronize_transition(int transition_index)
   }
 
   /*check if all processes are sensitive for this transition.*/
-  sp = tp->transition_sensitivities;
-  while(sp && sp->sensitive && sp = sp->next_transition_item);
+  for(sp = tp->transition_sensitivities; sp && sp->sensitive;
+        sp = sp->next_transition_item);
   if(sp){
-    printf("SS: synchronize_transition: transition:%d was not sensitive everywhere.\n");
+    printf("SS: synchronize_transition: transition:%d was not "\
+      "sensitive everywhere.\n", transition_index);
     return -1;
   }
 
+  m.m_ss_reply.transition_index = transition_index;
   /*notify all relevant processes.*/
-  sp = tp->transition_sensitivities;
-  do{
+  for(sp = tp->transition_sensitivities; sp; sp = sp->next_transition_item){
     ipc_send(sp->ep, &m);
   }
-  while(sp = sp->next_transition_item);
+  return OK;
 }
 
 /***
@@ -287,7 +289,7 @@ do_update_sensitivity(message *m_ptr)
   if(r != OK){
     printf("SS: update_sensitivity failed.\n");
     return r;
-  }next_transition_item;
+  }
 
   return OK;
 }
@@ -298,14 +300,19 @@ do_update_sensitivity(message *m_ptr)
 *when the transition can be performed.
 */
 int
-do_synchronize_transition(message *m_ptr)
+do_synchronise_transition(message *m_ptr)
 {
   int r;
-  r = synchronize_transition(m_ptr->m_ss_req.transition_index);
+  r = synchronise_transition(m_ptr->m_ss_req.transition_index);
   if(r != OK){
     printf("SS: synchronize_transition failed.\n");
     return r;
   }
 
   return OK;
+}
+
+int sef_cb_init_fresh(int UNUSED(type), sef_init_info_t *info)
+{
+	return(OK);
 }

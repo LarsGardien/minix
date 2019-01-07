@@ -61,6 +61,6 @@ struct boot_image image[NR_BOOT_PROCS] = {
 {VM_PROC_NR,    "vm"    },
 {PFS_PROC_NR,   "pfs"   },
 {MFS_PROC_NR,   "mfs"   },
-{SS_PROC_NR.    "ss"    },
+{SS_PROC_NR,    "ss"    },
 {INIT_PROC_NR,  "init"  },
 };

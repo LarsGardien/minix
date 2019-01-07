@@ -24,7 +24,7 @@ PROGRAMS+= ${PROGROOT}/minix/servers/mib/mib
 PROGRAMS+= ${PROGROOT}/minix/servers/vm/vm
 PROGRAMS+= ${PROGROOT}/minix/fs/pfs/pfs
 PROGRAMS+= ${PROGROOT}/minix/fs/mfs/mfs
-PROGRAMS+= ${PROGROOT}/minix/ss/ss
+PROGRAMS+= ${PROGROOT}/minix/servers/ss/ss
 PROGRAMS+= ${PROGROOT}/sbin/init/init
 
 all usage help:

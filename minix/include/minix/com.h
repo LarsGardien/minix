@@ -507,6 +507,12 @@
 #define DS_RETRIEVE_LABEL  (DS_RQ_BASE + 6)	/* retrieve label's name */
 #define DS_GETSYSINFO	(DS_RQ_BASE + 7)	/* get system information */
 
+#define SS_RQ_BASE    0x880
+
+#define SS_ALPHABET (SS_RQ_BASE + 0) /*add a transition to process alphabet*/
+#define SS_SENSITIVITY (SS_RQ_BASE + 1) /*update process sensitivity*/
+#define SS_SYNCHRONISE (SS_RQ_BASE + 2) /*perform a transition*/
+
 /*===========================================================================*
  *                Messages used between PM and VFS			     *
  *===========================================================================*/

@@ -6,6 +6,7 @@
 #include <minix/const.h>
 #include <sys/signal.h>
 #include <sys/types.h>
+#include <stdbool.h>
 
 /*==========================================================================*
  * Types relating to messages. 						    *
@@ -115,7 +116,7 @@ typedef struct {
 } mess_ds_req;
 _ASSERT_MSG_SIZE(mess_ds_req);
 
-typedef struct {
+typedef struct mess_ss_req{
 	int transition_index;
 	bool sensitive;
 	cp_grant_id_t prefix_grant;
@@ -123,9 +124,10 @@ typedef struct {
 	cp_grant_id_t action_grant;
 	size_t action_strlen;
 
-	uint8_t padding[35];
+	uint8_t padding[32];
 } mess_ss_req;
 _ASSERT_MSG_SIZE(mess_ss_req);
+
 
 typedef struct {
 	int transition_index;
@@ -2439,6 +2441,7 @@ typedef struct noxfer_message {
 		mess_ds_reply		m_ds_reply;
 		mess_ds_req		m_ds_req;
     mess_ss_req m_ss_req;
+		mess_ss_reply m_ss_reply;
 		mess_fs_vfs_breadwrite	m_fs_vfs_breadwrite;
 		mess_fs_vfs_chmod	m_fs_vfs_chmod;
 		mess_fs_vfs_chown	m_fs_vfs_chown;
