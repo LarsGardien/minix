@@ -6,7 +6,6 @@
 #include <minix/const.h>
 #include <sys/signal.h>
 #include <sys/types.h>
-#include <stdbool.h>
 
 /*==========================================================================*
  * Types relating to messages. 						    *
@@ -118,10 +117,10 @@ _ASSERT_MSG_SIZE(mess_ds_req);
 
 typedef struct mess_ss_req{
 	int transition_index;
-	bool sensitive;
-	cp_grant_id_t prefix_grant;
+	int sensitive;
+	vir_bytes prefix;
 	size_t prefix_strlen;
-	cp_grant_id_t action_grant;
+	vir_bytes action;
 	size_t action_strlen;
 
 	uint8_t padding[32];

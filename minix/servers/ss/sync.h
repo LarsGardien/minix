@@ -5,7 +5,6 @@
 #define SS_INSERT 2
 
 #include <minix/type.h>
-#include <stdbool.h>
 
 /*TransitionItem is used to map action and prefix
 strings to int indices to avoid strcmp.*/
@@ -22,7 +21,7 @@ typedef struct SensitivityItem {
 	struct SensitivityItem *next_transition_item; /*used by sync transition*/
 	endpoint_t ep;
 	int transition_index;
-	bool sensitive;
+	int sensitive;
 } SensitivityItem;
 
 typedef struct ProcessItem{

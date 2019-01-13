@@ -13,19 +13,16 @@ static TransitionItem *transitions;
 static int
 insert_transition_string(char *prefix, char *action, int *transition_index)
 {
-  TransitionStringItem *item = transition_strings;
-  TransitionStringItem *prev_item = NULL;
+  TransitionStringItem *item = NULL, *prev_item = NULL;
 
-  while(item){
+  for(item = transition_strings; item; prev_item = item, item = item->next_item){
     if(strcmp(item->prefix, prefix) == 0 && strcmp(item->action, action) == 0){
       *transition_index = item->index;
 	     return SS_EXIST;
     }
-    prev_item = item;
-    item = item->next_item;
   }
 
-  TransitionStringItem *new_item = (TransitionStringItem *)malloc(sizeof(TransitionStringItem));
+  TransitionStringItem *new_item = malloc(sizeof *new_item);
   if(NULL == new_item){
 	  panic("SS: insert_transition_string: TransitionItem malloc failed.\n");
   }
@@ -33,17 +30,23 @@ insert_transition_string(char *prefix, char *action, int *transition_index)
   new_item->prefix = prefix;
   new_item->action = action;
 
-  if(!item && !prev_item){ /*empty list*/
+  if(!prev_item){ /*empty list*/
 	new_item->index = 0;
 	transition_strings = new_item;
   }
-  else if(!item && prev_item){ /*add to tail*/
+  else if(prev_item){ /*add to tail*/
 	new_item->index = prev_item->index + 1;
 	prev_item->next_item = new_item;
   }
   *transition_index = new_item->index;
 
   return SS_INSERT;
+}
+
+static ProcessItem *
+find_or_create_process(endpoint_t ep)
+{
+  return NULL;
 }
 
 /***
@@ -53,27 +56,18 @@ insert_transition_string(char *prefix, char *action, int *transition_index)
 *already. Adds the sensitivity to the linked list.
 */
 static int
-insert_process_sensitivity(SensitivityItem *sensitivity)
+insert_process_sensitivity(ProcessItem *process, SensitivityItem *sensitivity)
 {
   SensitivityItem *sp = NULL, *prev_sp = NULL;
-  ProcessItem *xp = NULL;
-  /*Iterate processes until ep found.*/
-  for(xp = processes; xp && xp->ep != sensitivity->ep; xp = xp->next_item);
-  if(!xp){
-    printf("SS: insert_process_sensitivity: Could not find ep:%d "\
-      "in processes.\n", sensitivity->ep);
-    return -1;
-  }
-
   /*iterate ep's sensitivities until tail found*/
-  for(sp = xp->process_sensitivities; sp && sp->transition_index
+  for(sp = process->process_sensitivities; sp && sp->transition_index
     != sensitivity->transition_index; prev_sp = sp, sp = sp->next_proc_item);
   if(sp->transition_index == sensitivity->transition_index){
     printf("SS: insert_process_sensitivity: TransitionIndex already exists.\n");
     return -1;
   }
   if(!prev_sp){ /*insert empty list*/
-    xp->process_sensitivities = sensitivity;
+    process->process_sensitivities = sensitivity;
   } else if(prev_sp){ /*insert tail*/
     prev_sp->next_proc_item = sensitivity;
   }
@@ -120,7 +114,9 @@ sensitivities and transition sensitivities linked lists.
 static int
 add_alphabet(endpoint_t proc, char *prefix, char *action, int *transition_index)
 {
-  int r;
+  int r = 0;
+  ProcessItem *process = NULL;
+
   /*Check if transition is already reserved*/
   r = insert_transition_string(prefix, action, transition_index);
 	if(r < 0){
@@ -129,12 +125,13 @@ add_alphabet(endpoint_t proc, char *prefix, char *action, int *transition_index)
 		return r;
 	}
 	else if(r == SS_EXIST){ /*r=0 means transition already existed, preform cleanup*/
+    printf("SS: transition_string %s.%s already existed as: %d\n", prefix, action, *transition_index);
 		free(prefix);
 		free(action);
 	}
 
   /*Create new SensitivityItem*/
-  SensitivityItem *new_sensitivity = (SensitivityItem *)malloc(sizeof(SensitivityItem));
+  SensitivityItem *new_sensitivity = malloc(sizeof *new_sensitivity);
   if(NULL == new_sensitivity) {
     panic("SS: SensitivityItem malloc failed.\n");
   }
@@ -142,10 +139,30 @@ add_alphabet(endpoint_t proc, char *prefix, char *action, int *transition_index)
   new_sensitivity->next_transition_item = NULL;
   new_sensitivity->ep = proc;
   new_sensitivity->transition_index = *transition_index;
-  new_sensitivity->sensitive = false;
+  new_sensitivity->sensitive = 0;
+
+  ProcessItem *xp = NULL, *prev_xp = NULL, *new_process = NULL;
+  /*Iterate  until ep found.*/
+  for(xp = processes; xp && xp->ep != proc; prev_xp = xp, xp = xp->next_item);
+  if(!xp){ /*Process not found. Create and add to processes.*/
+    new_process = malloc(sizeof *new_process);
+    if(NULL == new_process) {
+      panic("SS: ProcessItem malloc failed.\n");
+    }
+    new_process->ep = proc;
+    new_process->next_item = NULL;
+    new_process->process_sensitivities = NULL;
+    if(!prev_xp){ /*insert empty list*/
+      processes = new_process;
+    } else{ /*insert after prev*/
+      prev_xp->next_item = new_process;
+    }
+    process = new_process;
+  }
+  process = xp;
 
   /*Insert into correct process_sensitivities*/
-  r = insert_process_sensitivity(new_sensitivity);
+  r = insert_process_sensitivity(process, new_sensitivity);
   if(r != OK){
     printf("SS: failed to insert %s.%s into process_sensitivities\n",
       prefix, action);
@@ -169,7 +186,7 @@ add_alphabet(endpoint_t proc, char *prefix, char *action, int *transition_index)
 *transition. Finally it updates the transition sensitivity.
 */
 static int
-update_sensitivity(endpoint_t ep, int transition_index, bool sensitive)
+update_sensitivity(endpoint_t ep, int transition_index, int sensitive)
 {
   SensitivityItem *sp = NULL, *prev_sp = NULL;
   ProcessItem *xp = NULL;
@@ -244,27 +261,28 @@ do_add_alphabet(message *m_ptr)
 	/*maloc m_ss_action_length*/
 	int r, transition_index;
 	char *prefix, *action;
-	prefix = (char *)malloc(m_ptr->m_ss_req.prefix_strlen);
+	prefix = malloc(m_ptr->m_ss_req.prefix_strlen+1);
 	if(NULL == prefix){
 		panic("SS: prefix malloc failed.\n");
 	}
 
-	action = (char *)malloc(m_ptr->m_ss_req.action_strlen);
+	action = malloc(m_ptr->m_ss_req.action_strlen+1);
 	if(NULL == action){
 		panic("SS: action malloc failed.\n");
 	}
 
-	/* Copy the memory ranges. */
-	r = sys_safecopyfrom(m_ptr->m_source, m_ptr->m_ss_req.prefix_grant,
-	        0, (vir_bytes) prefix, m_ptr->m_ss_req.prefix_strlen);
-	if(r != OK){
-		panic("SS: prefix safecopy failed.\n");
-	}
-	r = sys_safecopyfrom(m_ptr->m_source, m_ptr->m_ss_req.action_grant,
-	        0, (vir_bytes) action, m_ptr->m_ss_req.action_strlen);
-	if(r != OK){
-		panic("SS: prefix safecopy failed.\n");
-	}
+  r = sys_datacopy(m_ptr->m_source, m_ptr->m_ss_req.prefix,
+  		SELF, (vir_bytes)prefix, m_ptr->m_ss_req.prefix_strlen);
+	if (r != OK)
+		panic("SS: do_add_alphabet: sys_datacopy failed: %d", r);
+
+  r = sys_datacopy(m_ptr->m_source, m_ptr->m_ss_req.action,
+    		SELF, (vir_bytes)action, m_ptr->m_ss_req.action_strlen);
+	if (r != OK)
+		panic("SS: do_add_alphabet: sys_datacopy failed: %d", r);
+
+  action[m_ptr->m_ss_req.action_strlen] = '\0';
+  prefix[m_ptr->m_ss_req.prefix_strlen] = '\0';
 
   r = add_alphabet(m_ptr->m_source, prefix, action, &transition_index);
   if(r != OK){
