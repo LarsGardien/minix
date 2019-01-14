@@ -55,16 +55,18 @@ int main(int argc, char **argv)
           break;
       case SS_SYNCHRONISE:
           result = do_synchronise_transition(&m);
+          break;
       default:
           printf("SS: warning, got illegal request from %d\n", m.m_source);
           result = EINVAL;
+          break;
       }
 
 send_reply:
       /* Finally send reply message, unless disabled. */
       if (result != EDONTREPLY) {
           m.m_type = result;  		/* build reply message */
-	  reply(who_e, &m);		/* send it away */
+          reply(who_e, &m);		/* send it away */
       }
   }
   return(OK);				/* shouldn't come here */
