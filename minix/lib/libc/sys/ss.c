@@ -7,34 +7,31 @@
 #define OK 0
 
 int
-ss_add_alphabet(char *prefix, char *action, int *transition_index)
+ss_add_alphabet(char *prefix, char *actions, size_t actions_blklen, int nr_actions)
 {
   message m;
-	size_t prefix_strlen, action_strlen;
+	size_t prefix_strlen;
 	int r;
 
   prefix_strlen = strlen(prefix);
-  action_strlen = strlen(action);
 
-	m.m_ss_req.prefix = (vir_bytes)prefix;
-  m.m_ss_req.prefix_strlen = prefix_strlen;
-	m.m_ss_req.action = (vir_bytes)action;
-  m.m_ss_req.action_strlen = action_strlen;
+	m.m_ss_add_req.prefix = (vir_bytes)prefix;
+  m.m_ss_add_req.prefix_strlen = prefix_strlen;
+	m.m_ss_add_req.actions = (vir_bytes)actions;
+  m.m_ss_add_req.actions_blklen = actions_blklen;
+  m.m_ss_add_req.nr_actions = nr_actions;
 
 	r = _syscall(SS_PROC_NR, SS_ALPHABET, &m);
-  if(r == OK){
-    *transition_index = m.m_ss_reply.transition_index;
-  }
-	return m.m_type;
+	return r;
 }
 
 int
-ss_update_sensitivity(int transition_index, int sensitive)
+ss_update_sensitivities(int *sensitivities, int nr_sensitivities)
 {
   message m;
   int r;
-  m.m_ss_req.transition_index = transition_index;
-  m.m_ss_req.sensitive = sensitive;
+  m.m_ss_update_req.sensitivities = (vir_bytes) sensitivities;
+  m.m_ss_update_req.nr_sensitivities = nr_sensitivities;
 
   r = _syscall(SS_PROC_NR, SS_SENSITIVITY, &m);
   return r;
@@ -45,7 +42,7 @@ ss_synchronise_transition(int transition_index)
 {
   message m;
   int r;
-  m.m_ss_req.transition_index = transition_index;
+  m.m_ss_sync_req.transition_index = transition_index;
 
 	r = _syscall(SS_PROC_NR, SS_SYNCHRONISE, &m);
   return r;

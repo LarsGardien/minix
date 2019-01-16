@@ -17,9 +17,9 @@ typedef struct TransitionStringItem {
 } TransitionStringItem;
 
 typedef struct SensitivityItem {
-	struct SensitivityItem *next_proc_item;	/*used by update sensitivity*/
 	struct SensitivityItem *next_transition_item; /*used by sync transition*/
 	endpoint_t ep;
+  int process_transition_index;
 	int transition_index;
 	int sensitive;
 } SensitivityItem;
