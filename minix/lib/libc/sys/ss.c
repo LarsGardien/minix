@@ -15,6 +15,7 @@ ss_add_alphabet(char *prefix, char *actions, size_t actions_blklen, int nr_actio
 
   prefix_strlen = strlen(prefix);
 
+  memset(&m, 0, sizeof(m));
 	m.m_ss_add_req.prefix = (vir_bytes)prefix;
   m.m_ss_add_req.prefix_strlen = prefix_strlen;
 	m.m_ss_add_req.actions = (vir_bytes)actions;
@@ -30,6 +31,7 @@ ss_update_sensitivities(int *sensitivities, int nr_sensitivities)
 {
   message m;
   int r;
+  memset(&m, 0, sizeof(m));
   m.m_ss_update_req.sensitivities = (vir_bytes) sensitivities;
   m.m_ss_update_req.nr_sensitivities = nr_sensitivities;
 
@@ -42,8 +44,20 @@ ss_synchronise_transition(int transition_index)
 {
   message m;
   int r;
+  memset(&m, 0, sizeof(m));
   m.m_ss_sync_req.transition_index = transition_index;
 
 	r = _syscall(SS_PROC_NR, SS_SYNCHRONISE, &m);
+  return r;
+}
+
+int
+ss_delete_process()
+{
+  message m;
+  int r;
+  memset(&m, 0, sizeof(m));
+
+  r = _syscall(SS_PROC_NR, SS_DELETE, &m);
   return r;
 }

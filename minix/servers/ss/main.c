@@ -56,6 +56,9 @@ int main(int argc, char **argv)
       case SS_SYNCHRONISE:
           result = do_synchronise_transition(&m);
           break;
+      case SS_DELETE:
+          result = do_delete_process(&m);
+          break;
       default:
           printf("SS: warning, got illegal request from %d\n", m.m_source);
           result = EINVAL;

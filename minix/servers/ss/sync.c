@@ -118,9 +118,24 @@ insert_transition_sensitivity(TransitionItem *transition, SensitivityItem *sensi
     transition->transition_sensitivities = sensitivity;
   } else if(prev_sp){ /*insert tail*/
     prev_sp->next_transition_item = sensitivity;
+    sensitivity->prev_transition_item = prev_sp;
   }
 
   return OK;
+}
+
+static void
+remove_transition_sensitivity(SensitivityItem *sensitivity)
+{
+  if(sensitivity->prev_transition_item){
+    sensitivity->prev_transition_item->next_transition_item
+                        = sensitivity->next_transition_item;
+  }
+
+  if(sensitivity->next_transition_item){
+    sensitivity->next_transition_item->prev_transition_item
+                        = sensitivity->prev_transition_item;
+  }
 }
 
 /***
@@ -148,6 +163,7 @@ add_alphabet(
   }
   /*Assign the contiguous Sensitivity memory block to correct process.*/
   process = find_or_create_process(ep);
+  process->nr_sensitivities = nr_actions;
   process->process_sensitivities = sensitivity_items;
 
   for(i = 0; i < nr_actions; ++i){
@@ -199,7 +215,7 @@ update_sensitivities(
     return -1;
   }
 
-  for(i = 0; i < nr_sensitivities; ++i){
+  for(i = 0; i < xp->nr_sensitivities; ++i){
     xp->process_sensitivities[i].sensitive = sensitivities[i];
   }
 
@@ -244,6 +260,26 @@ synchronise_transition(int transition_index)
   return OK;
 }
 
+static int delete_process(endpoint_t proc)
+{
+  ProcessItem *xp = NULL, *prev_xp = NULL;
+  int i = 0;
+
+  for(xp = processes; xp && xp->ep != proc; prev_xp = xp, xp = xp->next_item);
+  if(!xp){
+    printf("SS: delete_process: process:%d was not found.\n", proc);
+    return -1;
+  }
+
+  for(i = 0; i < xp->nr_sensitivities; ++i){
+     remove_transition_sensitivity(&xp->process_sensitivities[i]);
+  }
+  free(xp->process_sensitivities);
+  free(xp);
+
+  return OK;
+}
+
 /***
 *System call that adds a single prefix-action combination (aka a transition) to the list
 *of known transition strings and assigns it an index. When a transition is already known, return
@@ -264,7 +300,7 @@ do_add_alphabet(message *m_ptr)
 
 	actions = malloc(m_ptr->m_ss_add_req.actions_blklen);
 	if(NULL == actions){
-		panic("SS: action malloc failed.\n");
+		panic("SS: actions malloc failed.\n");
 	}
 
   r = sys_datacopy(m_ptr->m_source, m_ptr->m_ss_add_req.prefix,
@@ -300,7 +336,7 @@ do_update_sensitivity(message *m_ptr)
   int *sensitivities = NULL;
   sensitivities = malloc(m_ptr->m_ss_update_req.nr_sensitivities * sizeof(int));
   if(NULL == sensitivities){
-    panic("SS: action malloc failed.\n");
+    panic("SS: sensitivities malloc failed.\n");
   }
 
   r = sys_datacopy(m_ptr->m_source, m_ptr->m_ss_update_req.sensitivities,
@@ -341,4 +377,17 @@ do_synchronise_transition(message *m_ptr)
 int sef_cb_init_fresh(int UNUSED(type), sef_init_info_t *info)
 {
 	return(OK);
+}
+
+int
+do_delete_process(message *m_ptr)
+{
+  int r;
+  r = delete_process(m_ptr->m_source);
+  if(r != OK){
+    printf("SS: delete_process failed.\n");
+    return r;
+  }
+
+  return OK;
 }

@@ -512,6 +512,7 @@
 #define SS_ALPHABET (SS_RQ_BASE + 0) /*add a transition to process alphabet*/
 #define SS_SENSITIVITY (SS_RQ_BASE + 1) /*update process sensitivity*/
 #define SS_SYNCHRONISE (SS_RQ_BASE + 2) /*perform a transition*/
+#define SS_DELETE (SS_RQ_BASE + 3) /*delete a process from SS*/
 
 /*===========================================================================*
  *                Messages used between PM and VFS			     *

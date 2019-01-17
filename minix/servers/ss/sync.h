@@ -17,6 +17,7 @@ typedef struct TransitionStringItem {
 } TransitionStringItem;
 
 typedef struct SensitivityItem {
+	struct SensitivityItem *prev_transition_item; /*used by remove_transition*/
 	struct SensitivityItem *next_transition_item; /*used by sync transition*/
 	endpoint_t ep;
   int process_transition_index;
@@ -27,6 +28,7 @@ typedef struct SensitivityItem {
 typedef struct ProcessItem{
 	struct ProcessItem *next_item;
 	endpoint_t ep;
+	int nr_sensitivities;
 	SensitivityItem *process_sensitivities; /*iterate sensitivities for proc*/
 } ProcessItem;
 
