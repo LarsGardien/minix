@@ -51,7 +51,7 @@ int main(int argc, char **argv)
           result = do_add_alphabet(&m);
           break;
       case SS_SENSITIVITY:
-          result = do_update_sensitivity(&m);
+          result = do_update_sensitivities(&m);
           break;
       case SS_SYNCHRONISE:
           result = do_synchronise_transition(&m);
@@ -64,7 +64,7 @@ int main(int argc, char **argv)
           result = EINVAL;
           break;
       }
-
+      do_print_ss();
 send_reply:
       /* Finally send reply message, unless disabled. */
       if (result != EDONTREPLY) {

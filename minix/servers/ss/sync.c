@@ -1,6 +1,12 @@
 #include "inc.h"
 #include "sync.h"
 
+int do_add_alphabet(message *m_ptr);
+int do_update_sensitivities(message *m_ptr);
+int do_synchronise_transition(message *m_ptr);
+int do_delete_process(message *m_ptr);
+int sef_cb_init_fresh(int UNUSED(type), sef_init_info_t *info);
+
 static TransitionStringItem *transition_strings;
 static ProcessItem *processes;
 static TransitionItem *transitions;
@@ -108,9 +114,10 @@ insert_transition_sensitivity(TransitionItem *transition, SensitivityItem *sensi
   SensitivityItem *sp = NULL, *prev_sp = NULL;
 
   /*iterate transition_sensitivities until tail*/
-  for(sp = transition->transition_sensitivities; sp && sp->ep != sensitivity->ep;
-     prev_sp = sp, sp = sp->next_transition_item);
-  if(sp && sp->ep == sensitivity->ep){
+  for(sp = transition->transition_sensitivities; sp && sp->process->ep
+      != sensitivity->process->ep; prev_sp = sp, sp = sp->next_transition_item);
+
+  if(sp && sp->process->ep == sensitivity->process->ep){
     printf("SS: insert_transition_sensitivity: process already exists.\n");
     return -1;
   }
@@ -127,14 +134,20 @@ insert_transition_sensitivity(TransitionItem *transition, SensitivityItem *sensi
 static void
 remove_transition_sensitivity(SensitivityItem *sensitivity)
 {
+  /*If removing the first item in transition_sensitivities, fix pointer*/
+  if(sensitivity == sensitivity->transition->transition_sensitivities){
+    sensitivity->transition->transition_sensitivities
+            = sensitivity->next_transition_item;
+  }
+
   if(sensitivity->prev_transition_item){
-    sensitivity->prev_transition_item->next_transition_item
-                        = sensitivity->next_transition_item;
+    sensitivity->prev_transition_item->next_transition_item =
+            sensitivity->next_transition_item;
   }
 
   if(sensitivity->next_transition_item){
-    sensitivity->next_transition_item->prev_transition_item
-                        = sensitivity->prev_transition_item;
+    sensitivity->next_transition_item->prev_transition_item =
+            sensitivity->prev_transition_item;
   }
 }
 
@@ -174,12 +187,12 @@ add_alphabet(
         prefix, action_strings);
   		return r;
   	}
-    sensitivity_items[i].ep = ep;
+    sensitivity_items[i].process = process;
     sensitivity_items[i].process_transition_index = i;
-    sensitivity_items[i].transition_index = transition_index;
     sensitivity_items[i].sensitive = 0;
 
     transition = find_or_create_transition(transition_index);
+    sensitivity_items[i].transition = transition;
     /*Insert into correct transition_sensitivities*/
     r = insert_transition_sensitivity(transition, &sensitivity_items[i]);
     if(r != OK){
@@ -230,6 +243,7 @@ update_sensitivities(
 static int
 synchronise_transition(int transition_index)
 {
+  int r;
   message m;
   SensitivityItem *sp = NULL;
   TransitionItem *tp = NULL;
@@ -255,7 +269,17 @@ synchronise_transition(int transition_index)
   /*notify all relevant processes.*/
   for(sp = tp->transition_sensitivities; sp; sp = sp->next_transition_item){
     /*TODO: set process_transition_index*/
-    ipc_send(sp->ep, &m);
+    m.m_ss_sync_not.transition_index = sp->process_transition_index;
+    r = ipc_sendrec(sp->process->ep, &m);
+    if(r != OK){
+      printf("SS: synchronize_transition: could not notify %d\n", sp->process->ep);
+      return -1;
+    }
+    r = do_update_sensitivities(&m);
+    if(r != OK){
+      printf("SS: synchronize_transition: could not update %d\n", sp->process->ep);
+      return -1;
+    }
   }
   return OK;
 }
@@ -273,6 +297,13 @@ static int delete_process(endpoint_t proc)
 
   for(i = 0; i < xp->nr_sensitivities; ++i){
      remove_transition_sensitivity(&xp->process_sensitivities[i]);
+  }
+
+  if(prev_xp){
+    prev_xp->next_item = xp->next_item;
+  }
+  else{
+    processes = xp->next_item;
   }
   free(xp->process_sensitivities);
   free(xp);
@@ -330,7 +361,7 @@ do_add_alphabet(message *m_ptr)
 *calling process.
 */
 int
-do_update_sensitivity(message *m_ptr)
+do_update_sensitivities(message *m_ptr)
 {
   int r;
   int *sensitivities = NULL;
@@ -374,11 +405,6 @@ do_synchronise_transition(message *m_ptr)
   return OK;
 }
 
-int sef_cb_init_fresh(int UNUSED(type), sef_init_info_t *info)
-{
-	return(OK);
-}
-
 int
 do_delete_process(message *m_ptr)
 {
@@ -390,4 +416,48 @@ do_delete_process(message *m_ptr)
   }
 
   return OK;
+}
+
+int do_print_ss()
+{
+  ProcessItem *xp = NULL;
+  TransitionItem *tp = NULL;
+  SensitivityItem *sp = NULL;
+  int i = 0;
+
+  for(xp = processes; xp; xp = xp->next_item){
+    printf("process: ep: %d. nr_sens: %d\n", xp->ep, xp->nr_sensitivities);
+    for(i = 0; i < xp->nr_sensitivities; ++i){
+      printf("%p - %p %d %d %d %d\n",
+          xp->process_sensitivities[i].prev_transition_item,
+          xp->process_sensitivities[i].next_transition_item,
+          xp->process_sensitivities[i].transition->transition_index,
+          xp->process_sensitivities[i].process->ep,
+          xp->process_sensitivities[i].process_transition_index,
+          xp->process_sensitivities[i].sensitive
+        );
+    }
+  }
+  printf("\n");
+
+  for(tp = transitions; tp; tp = tp->next_item){
+    printf("transition: tidx: %d\n", tp->transition_index);
+    for(sp = tp->transition_sensitivities; sp; sp = sp->next_transition_item){
+      printf("%p - %p %d %d %d %d\n",
+          sp->prev_transition_item,
+          sp->next_transition_item,
+          sp->transition->transition_index,
+          sp->process->ep,
+          sp->process_transition_index,
+          sp->sensitive
+        );
+    }
+  }
+  return OK;
+}
+
+
+int sef_cb_init_fresh(int UNUSED(type), sef_init_info_t *info)
+{
+	return(OK);
 }

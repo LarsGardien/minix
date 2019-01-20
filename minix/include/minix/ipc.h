@@ -138,6 +138,12 @@ typedef struct mess_ss_sync_req{
 } mess_ss_sync_req;
 _ASSERT_MSG_SIZE(mess_ss_sync_req);
 
+typedef struct mess_ss_sync_not{
+  int transition_index;
+  uint8_t padding[52];
+} mess_ss_sync_not;
+_ASSERT_MSG_SIZE(mess_ss_sync_not);
+
 typedef struct {
 	off_t seek_pos;
 
@@ -2445,6 +2451,7 @@ typedef struct noxfer_message {
     mess_ss_add_req m_ss_add_req;
     mess_ss_update_req m_ss_update_req;
     mess_ss_sync_req m_ss_sync_req;
+    mess_ss_sync_not m_ss_sync_not;
 		mess_fs_vfs_breadwrite	m_fs_vfs_breadwrite;
 		mess_fs_vfs_chmod	m_fs_vfs_chmod;
 		mess_fs_vfs_chown	m_fs_vfs_chown;
