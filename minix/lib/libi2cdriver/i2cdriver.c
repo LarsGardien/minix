@@ -8,6 +8,9 @@
 #include <minix/ipc.h>
 #include <minix/ds.h>
 
+static void
+array_to_int(uint8_t *array, uint32_t *value, int arraylen);
+
 void
 i2cdriver_announce(uint32_t bus)
 {
@@ -193,16 +196,16 @@ i2cdriver_exec(endpoint_t bus_endpoint, minix_i2c_ioctl_exec_t * ioctl_exec)
 	return m.m_type;
 }
 
-static int
-__i2creg_read(endpoint_t bus_endpoint, i2c_addr_t address, uint8_t raw,
-    uint8_t reg, uint32_t * val, size_t vallen)
+int
+i2creg_read(endpoint_t bus_endpoint, i2c_addr_t address, uint8_t *cmd,
+	size_t cmdlen, uint8_t *val, size_t vallen)
 {
-	uint32_t i;
 	int r;
 	minix_i2c_ioctl_exec_t ioctl_exec;
 
 	assert(val != NULL);
-	assert(vallen >= 1 && vallen <= 4);
+	assert(vallen >= 1 && vallen <= I2C_EXEC_MAX_BUFLEN);
+	assert(cmdlen <= I2C_EXEC_MAX_CMDLEN);
 
 	memset(&ioctl_exec, '\0', sizeof(minix_i2c_ioctl_exec_t));
 
@@ -210,10 +213,10 @@ __i2creg_read(endpoint_t bus_endpoint, i2c_addr_t address, uint8_t raw,
 	ioctl_exec.iie_op = I2C_OP_READ_WITH_STOP;
 	ioctl_exec.iie_addr = address;
 
-	if (!raw) {
+	if (cmdlen > 0) {
 		/* write the register address */
-		ioctl_exec.iie_cmd[0] = reg;
-		ioctl_exec.iie_cmdlen = 1;
+		memcpy(ioctl_exec.iie_cmd, cmd, cmdlen);
+		ioctl_exec.iie_cmdlen = cmdlen;
 	}
 
 	/* read vallen bytes */
@@ -224,9 +227,7 @@ __i2creg_read(endpoint_t bus_endpoint, i2c_addr_t address, uint8_t raw,
 		return -1;
 	}
 
-	for (*val = 0, i = 0; i < vallen; i++) {
-		*val = ((*val) << 8) | ioctl_exec.iie_buf[i];
-	}
+	memcpy(val, ioctl_exec.iie_buf, vallen);
 
 	return OK;
 }
@@ -235,11 +236,7 @@ int
 i2creg_raw_read8(endpoint_t bus_endpoint, i2c_addr_t address, uint8_t * val)
 {
 	int r;
-	uint32_t val32;
-
-	r = __i2creg_read(bus_endpoint, address, 1, 0, &val32, 1);
-	*val = val32 & 0xff;
-
+	r = i2creg_read(bus_endpoint, address, NULL, 0, val, 1);
 	return r;
 }
 
@@ -248,11 +245,7 @@ i2creg_read8(endpoint_t bus_endpoint, i2c_addr_t address, uint8_t reg,
     uint8_t * val)
 {
 	int r;
-	uint32_t val32;
-
-	r = __i2creg_read(bus_endpoint, address, 0, reg, &val32, 1);
-	*val = val32 & 0xff;
-
+	r = i2creg_read(bus_endpoint, address, &reg, 1, val, 1);
 	return r;
 }
 
@@ -261,10 +254,10 @@ i2creg_read16(endpoint_t bus_endpoint, i2c_addr_t address, uint8_t reg,
     uint16_t * val)
 {
 	int r;
-	uint32_t val32;
+	uint8_t value[2];
 
-	r = __i2creg_read(bus_endpoint, address, 0, reg, &val32, 2);
-	*val = val32 & 0xffff;
+	r = i2creg_read(bus_endpoint, address, &reg, 1, value, 2);
+	array_to_int(value, (uint32_t *)val, 2);
 
 	return r;
 }
@@ -273,7 +266,13 @@ int
 i2creg_read24(endpoint_t bus_endpoint, i2c_addr_t address, uint8_t reg,
     uint32_t * val)
 {
-	return __i2creg_read(bus_endpoint, address, 0, reg, val, 3);
+	int r;
+	uint8_t value[3];
+
+	r = i2creg_read(bus_endpoint, address, &reg, 1, value, 3);
+	array_to_int(value, val, 3);
+
+	return r;
 }
 
 static int
@@ -363,4 +362,14 @@ i2creg_clear_bits8(endpoint_t bus_endpoint, i2c_addr_t address, uint8_t reg,
 	}
 
 	return OK;
+}
+
+static void
+array_to_int(uint8_t *array, uint32_t *value, int arraylen)
+{
+	int i;
+	assert(arraylen >= 1 && arraylen <= 4);
+	for (*value = 0, i = 0; i < arraylen; i++) {
+		*value = ((*value) << 8) | value[i];
+	}
 }
