@@ -122,6 +122,10 @@ tcs34725_read_hook(devminor_t UNUSED(minor), u64_t position, endpoint_t endpt,
 	int ret;
 	uint16_t c = 0, r = 0, g = 0, b = 0;
 
+	if(position != 0){
+		return 0; /*EOF*/
+	}
+
 	uint8_t rgbc[8];
 	uint8_t command[] = {TCS34725_COMMAND_BIT | TCS34725_CDATAL};
 	if((ret = i2creg_read(bus_endpoint, address, command, 1, rgbc, 8)) != OK)
