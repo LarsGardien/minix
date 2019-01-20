@@ -7,6 +7,7 @@
 #include <minix/chardriver.h>
 #include <minix/log.h>
 #include <minix/type.h>
+#include <minix/safecopies.h>
 
 #include "tcs34725.h"
 
@@ -120,7 +121,6 @@ tcs34725_read_hook(devminor_t UNUSED(minor), u64_t position, endpoint_t endpt,
 {
 	int ret;
 	uint16_t c = 0, r = 0, g = 0, b = 0;
-	printf("tcs34725 read\n");
 
 	uint8_t rgbc[8];
 	uint8_t command[] = {TCS34725_COMMAND_BIT | TCS34725_CDATAL};
@@ -129,13 +129,10 @@ tcs34725_read_hook(devminor_t UNUSED(minor), u64_t position, endpoint_t endpt,
 		log_warn(&log, "Failed to read from device.\n");
 		return -1;
 	}
-	c = (rgbc[1] << 8) | rgbc[0];
-	r = (rgbc[3] << 8) | rgbc[2];
-	g = (rgbc[5] << 8) | rgbc[4];
-	b = (rgbc[7] << 8) | rgbc[6];
 
-	printf("R %d; G %d; B %d; C %d;\n", r, g, b, c);
-	return OK;
+	ret = sys_safecopyto(endpt, grant, 0, (vir_bytes)rgbc, 8);
+
+	return (ret != OK) ? ret : 8;
 }
 
 static void
