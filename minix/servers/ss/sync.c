@@ -10,6 +10,7 @@ int sef_cb_init_fresh(int UNUSED(type), sef_init_info_t *info);
 static TransitionStringItem *transition_strings;
 static ProcessItem *processes;
 static TransitionItem *transitions;
+static int waiting_for_update;
 
 /***
 *Checks if a given prefix-action combination is already known. if known: sets p:transition_index
@@ -178,6 +179,7 @@ add_alphabet(
   process = find_or_create_process(ep);
   process->nr_sensitivities = nr_actions;
   process->process_sensitivities = sensitivity_items;
+  process->waiting_for_update = 0;
 
   for(i = 0; i < nr_actions; ++i){
     /*Check if transition is already reserved*/
@@ -230,6 +232,10 @@ update_sensitivities(
 
   for(i = 0; i < xp->nr_sensitivities; ++i){
     xp->process_sensitivities[i].sensitive = sensitivities[i];
+    if(xp->waiting_for_update){
+      xp->waiting_for_update = 0;
+      --waiting_for_update;
+    }
   }
 
   return OK;
@@ -247,6 +253,12 @@ synchronise_transition(int transition_index)
   message m;
   SensitivityItem *sp = NULL;
   TransitionItem *tp = NULL;
+
+  if(waiting_for_update != 0){
+    printf("SS: could not sync, still waiting for %d updates.\n", waiting_for_update);
+    return -1;
+  }
+
   /*Find the correct transition in transitions.*/
   for(tp = transitions; tp && tp->transition_index != transition_index;
         tp = tp->next_item);
@@ -265,26 +277,22 @@ synchronise_transition(int transition_index)
     return -1;
   }
 
-  memset(&m, 0, sizeof(m));
   /*notify all relevant processes.*/
   for(sp = tp->transition_sensitivities; sp; sp = sp->next_transition_item){
-    /*TODO: set process_transition_index*/
+    sp->process->waiting_for_update = 1;
+    ++waiting_for_update;
     m.m_ss_sync_not.transition_index = sp->process_transition_index;
-    r = ipc_sendrec(sp->process->ep, &m);
+    r = ipc_sendnb(sp->process->ep, &m);
     if(r != OK){
       printf("SS: synchronize_transition: could not notify %d\n", sp->process->ep);
-      return -1;
-    }
-    r = do_update_sensitivities(&m);
-    if(r != OK){
-      printf("SS: synchronize_transition: could not update %d\n", sp->process->ep);
       return -1;
     }
   }
   return OK;
 }
 
-static int delete_process(endpoint_t proc)
+static int
+delete_process(endpoint_t proc)
 {
   ProcessItem *xp = NULL, *prev_xp = NULL;
   int i = 0;

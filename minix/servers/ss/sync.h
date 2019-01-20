@@ -25,6 +25,7 @@ struct ProcessItem{
 	struct ProcessItem *next_item;
 	endpoint_t ep;
 	int nr_sensitivities;
+  int waiting_for_update;
 	SensitivityItem *process_sensitivities; /*iterate sensitivities for proc*/
 };
 
