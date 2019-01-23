@@ -549,13 +549,13 @@ static int do_sync_ipc(struct proc * caller_ptr, /* who made the call */
    * kernel may only be SENDREC, because tasks always reply and may not block
    * if the caller doesn't do receive().
    */
-/*  if (!(priv(caller_ptr)->s_trap_mask & (1 << call_nr))) {
+  if (!(priv(caller_ptr)->s_trap_mask & (1 << call_nr))) {
 #if DEBUG_ENABLE_IPC_WARNINGS
       printf("sys_call: %s not allowed, caller %d, src_dst %d\n",
           callname, proc_nr(caller_ptr), src_dst_p);
 #endif
-	return(ETRAPDENIED);*/		/* trap denied by mask or kernel */
-/*}*/
+	return(ETRAPDENIED);		/* trap denied by mask or kernel */
+  }
 
   if (call_nr != SENDREC && call_nr != RECEIVE && iskerneln(src_dst_p)) {
 #if DEBUG_ENABLE_IPC_WARNINGS

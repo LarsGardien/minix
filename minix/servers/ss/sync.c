@@ -29,6 +29,8 @@ insert_transition_string(char *prefix, char *action, int *transition_index)
     }
   }
 
+  printf("Adding %s.%s to stringitems.\n", prefix, action);
+
   size_t prefix_len = strlen(prefix);
   size_t action_len = strlen(action);
   TransitionStringItem *new_item =
@@ -37,8 +39,8 @@ insert_transition_string(char *prefix, char *action, int *transition_index)
 	  panic("SS: insert_transition_string: TransitionItem malloc failed.\n");
   }
   new_item->next_item = NULL;
-  new_item->prefix = (char *)(new_item + sizeof *new_item);
-  new_item->action = (char *)(new_item + sizeof *new_item + prefix_len+1);
+  new_item->prefix = (char *)((char *)new_item + sizeof *new_item);
+  new_item->action = (char *)((char *)new_item + sizeof *new_item + prefix_len+1);
   memcpy(new_item->prefix, prefix, prefix_len+1); /*copy + '\0'*/
   memcpy(new_item->action, action, action_len+1); /*copy + '\0'*/
 
@@ -163,7 +165,9 @@ add_alphabet(
   endpoint_t ep,
   char *prefix,
   char *action_strings,
-  int nr_actions)
+  int nr_actions,
+  int *transition_indices,
+  char *fifo_filename)
 {
   int i = 0, r = 0, transition_index = 0;;
   TransitionItem *transition = NULL;
@@ -176,10 +180,11 @@ add_alphabet(
     panic("SS: SensitivityItems malloc failed.\n");
   }
   /*Assign the contiguous Sensitivity memory block to correct process.*/
-  process = find_or_create_process(ep);
+  process = find_or_create_process(ep); /*Assume created*/
   process->nr_sensitivities = nr_actions;
   process->process_sensitivities = sensitivity_items;
   process->waiting_for_update = 0;
+  process->fifo_filename = fifo_filename;
 
   for(i = 0; i < nr_actions; ++i){
     /*Check if transition is already reserved*/
@@ -189,22 +194,23 @@ add_alphabet(
         prefix, action_strings);
   		return r;
   	}
-    sensitivity_items[i].process = process;
-    sensitivity_items[i].process_transition_index = i;
-    sensitivity_items[i].sensitive = 0;
-
+    transition_indices[i] = transition_index; /*return to process.*/
     transition = find_or_create_transition(transition_index);
+
     sensitivity_items[i].transition = transition;
+    sensitivity_items[i].process = process;
+    sensitivity_items[i].sensitive = 0;
     /*Insert into correct transition_sensitivities*/
     r = insert_transition_sensitivity(transition, &sensitivity_items[i]);
     if(r != OK){
-      printf("SS: failed to insert %s.%s into transition_sensitivities\n",
+      printf("SS: failed to insert %s.%s into transition_sensitivities.\n",
         prefix, action_strings);
       return r;
     }
 
     while(*action_strings++ != '\0'); /*Skip to next string*/
   }
+
   return OK;
 }
 
@@ -249,7 +255,7 @@ update_sensitivities(
 static int
 synchronise_transition(int transition_index)
 {
-  int r;
+  int r, fd;
   message m;
   SensitivityItem *sp = NULL;
   TransitionItem *tp = NULL;
@@ -281,12 +287,25 @@ synchronise_transition(int transition_index)
   for(sp = tp->transition_sensitivities; sp; sp = sp->next_transition_item){
     sp->process->waiting_for_update = 1;
     ++waiting_for_update;
-    m.m_ss_sync_not.transition_index = sp->process_transition_index;
-    r = ipc_sendnb(sp->process->ep, &m);
-    if(r != OK){
+
+    fd = open(sp->process->fifo_filename, O_WRONLY);
+    if(fd == -1){
+      printf("SS: synchronize_transition: failed to open FIFO for %d.\n",
+            sp->process->ep);
+      return -1;
+    }
+    r = write(fd, &transition_index, sizeof(transition_index));
+    if(r != sizeof(transition_index)){
       printf("SS: synchronize_transition: could not notify %d\n", sp->process->ep);
       return -1;
     }
+    r = close(fd);
+    if(r != OK){
+      printf("SS: synchronize_transition: failed to close FIFO for %d.\n",
+            sp->process->ep);
+      return -1;
+    }
+
   }
   return OK;
 }
@@ -295,7 +314,7 @@ static int
 delete_process(endpoint_t proc)
 {
   ProcessItem *xp = NULL, *prev_xp = NULL;
-  int i = 0;
+  int r = 0, i = 0;
 
   for(xp = processes; xp && xp->ep != proc; prev_xp = xp, xp = xp->next_item);
   if(!xp){
@@ -313,6 +332,12 @@ delete_process(endpoint_t proc)
   else{
     processes = xp->next_item;
   }
+
+  if(xp->waiting_for_update){
+    --waiting_for_update;
+  }
+
+  free(xp->fifo_filename);
   free(xp->process_sensitivities);
   free(xp);
 
@@ -331,7 +356,8 @@ do_add_alphabet(message *m_ptr)
 {
 	/*maloc m_ss_action_length*/
 	int r, transition_index;
-	char *prefix, *actions;
+  int *transition_indices;
+	char *prefix, *actions, *fifo_filename;
 	prefix = malloc(m_ptr->m_ss_add_req.prefix_strlen+1);
 	if(NULL == prefix){
 		panic("SS: prefix malloc failed.\n");
@@ -342,22 +368,48 @@ do_add_alphabet(message *m_ptr)
 		panic("SS: actions malloc failed.\n");
 	}
 
+  fifo_filename = malloc(m_ptr->m_ss_add_req.fifo_filename_strlen+1);
+  if(NULL == fifo_filename){
+    panic("SS: fifo_filename malloc failed.\n");
+  }
+
+  transition_indices = malloc(
+              m_ptr->m_ss_add_req.nr_actions * sizeof *transition_indices);
+
   r = sys_datacopy(m_ptr->m_source, m_ptr->m_ss_add_req.prefix,
-  		SELF, (vir_bytes)prefix, m_ptr->m_ss_add_req.prefix_strlen);
+      SELF, (vir_bytes)prefix, m_ptr->m_ss_add_req.prefix_strlen);
 	if (r != OK){
 		panic("SS: do_add_alphabet: sys_datacopy failed: %d", r);
   }
   r = sys_datacopy(m_ptr->m_source, m_ptr->m_ss_add_req.actions,
-    		SELF, (vir_bytes)actions, m_ptr->m_ss_add_req.actions_blklen);
+      SELF, (vir_bytes)actions, m_ptr->m_ss_add_req.actions_blklen);
 	if (r != OK){
 		panic("SS: do_add_alphabet: sys_datacopy failed: %d", r);
   }
   prefix[m_ptr->m_ss_add_req.prefix_strlen] = '\0';
+  r = sys_datacopy(m_ptr->m_source, m_ptr->m_ss_add_req.fifo_filename,
+      SELF, (vir_bytes)fifo_filename, m_ptr->m_ss_add_req.fifo_filename_strlen);
+  if(r != OK){
+    panic("SS: do_add_alphabet: sys_datacopy failed: %d", r);
+  }
+  fifo_filename[m_ptr->m_ss_add_req.fifo_filename_strlen] = '\0';
 
-  r = add_alphabet(m_ptr->m_source, prefix, actions, m_ptr->m_ss_add_req.nr_actions);
+  r = add_alphabet(m_ptr->m_source, prefix, actions,
+    m_ptr->m_ss_add_req.nr_actions, transition_indices, fifo_filename);
   if(r != OK){
     printf("SS: add_alphabet failed.\n");
+    goto exit;
   }
+
+  r = sys_datacopy(SELF, (vir_bytes)transition_indices, m_ptr->m_source,
+    m_ptr->m_ss_add_req.transition_indices, m_ptr->m_ss_add_req.nr_actions
+    * sizeof *transition_indices);
+  if(r != OK){
+    panic("SS: add_alphabet: failed to transfer indices.\n");
+  }
+
+exit:
+  free(transition_indices);
   free(prefix);
   free(actions);
 
@@ -436,12 +488,11 @@ int do_print_ss()
   for(xp = processes; xp; xp = xp->next_item){
     printf("process: ep: %d. nr_sens: %d\n", xp->ep, xp->nr_sensitivities);
     for(i = 0; i < xp->nr_sensitivities; ++i){
-      printf("%p - %p %d %d %d %d\n",
+      printf("%p - %p %d %d %d\n",
           xp->process_sensitivities[i].prev_transition_item,
           xp->process_sensitivities[i].next_transition_item,
           xp->process_sensitivities[i].transition->transition_index,
           xp->process_sensitivities[i].process->ep,
-          xp->process_sensitivities[i].process_transition_index,
           xp->process_sensitivities[i].sensitive
         );
     }
@@ -451,12 +502,11 @@ int do_print_ss()
   for(tp = transitions; tp; tp = tp->next_item){
     printf("transition: tidx: %d\n", tp->transition_index);
     for(sp = tp->transition_sensitivities; sp; sp = sp->next_transition_item){
-      printf("%p - %p %d %d %d %d\n",
+      printf("%p - %p %d %d %d\n",
           sp->prev_transition_item,
           sp->next_transition_item,
           sp->transition->transition_index,
           sp->process->ep,
-          sp->process_transition_index,
           sp->sensitive
         );
     }

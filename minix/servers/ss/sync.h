@@ -26,6 +26,7 @@ struct ProcessItem{
 	endpoint_t ep;
 	int nr_sensitivities;
   int waiting_for_update;
+  char *fifo_filename;
 	SensitivityItem *process_sensitivities; /*iterate sensitivities for proc*/
 };
 
@@ -40,7 +41,6 @@ struct SensitivityItem {
 	struct SensitivityItem *next_transition_item; /*used by sync transition*/
 	TransitionItem *transition;
 	ProcessItem *process;
-  int process_transition_index;
 	int sensitive;
 };
 

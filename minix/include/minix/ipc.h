@@ -121,7 +121,10 @@ typedef struct mess_ss_add_req{
 	vir_bytes actions;
 	size_t actions_blklen;
   int nr_actions;
-	uint8_t padding[36];
+  vir_bytes transition_indices;
+  vir_bytes fifo_filename;
+  size_t fifo_filename_strlen;
+	uint8_t padding[24];
 } mess_ss_add_req;
 _ASSERT_MSG_SIZE(mess_ss_add_req);
 

@@ -7,6 +7,8 @@
 
 #include <sys/types.h>
 #include <sys/param.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <limits.h>
 #include <errno.h>
 #include <regex.h>

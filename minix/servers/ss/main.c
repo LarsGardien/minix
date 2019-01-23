@@ -64,7 +64,7 @@ int main(int argc, char **argv)
           result = EINVAL;
           break;
       }
-      do_print_ss();
+      /*do_print_ss();*/
 send_reply:
       /* Finally send reply message, unless disabled. */
       if (result != EDONTREPLY) {
