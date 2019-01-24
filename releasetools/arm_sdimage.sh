@@ -158,7 +158,7 @@ ${RELEASETOOLSDIR}/gen_uEnv.txt.sh -c ${CONSOLE}  > ${ROOT_DIR}/uEnv.txt
 ${CROSS_PREFIX}objcopy ${OBJ}/minix/kernel/kernel -O binary ${ROOT_DIR}/kernel.bin
 
 for f in servers/vm/vm servers/rs/rs servers/pm/pm servers/sched/sched \
-	servers/vfs/vfs servers/ds/ds servers/mib/mib fs/pfs/pfs fs/mfs/mfs \
+	servers/vfs/vfs servers/ds/ds servers/mib/mib servers/ss/ss fs/pfs/pfs fs/mfs/mfs \
 	../sbin/init/init drivers/tty/tty/tty drivers/storage/memory/memory
 do
     fn=`basename $f`.elf

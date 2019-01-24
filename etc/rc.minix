@@ -168,6 +168,7 @@ start)
 	edit memory
 	edit mib
 	edit pfs
+  edit ss
 	edit init
 	#
 	# Keep a copy around to recover the root FS from crashes

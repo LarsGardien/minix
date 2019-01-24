@@ -312,7 +312,8 @@ menuentry "Minix Boot" {
         module /boot/minix_default/mod09_vm
         module /boot/minix_default/mod10_pfs
         module /boot/minix_default/mod11_mfs
-        module /boot/minix_default/mod12_init
+        module /boot/minix_default/mod12_ss
+        module /boot/minix_default/mod13_init
 }
 
 menuentry "Minix Boot (serial)" {
@@ -329,7 +330,8 @@ menuentry "Minix Boot (serial)" {
         module /boot/minix_default/mod09_vm
         module /boot/minix_default/mod10_pfs
         module /boot/minix_default/mod11_mfs
-        module /boot/minix_default/mod12_init
+        module /boot/minix_default/mod12_ss
+        module /boot/minix_default/mod13_init
 }
 END_GRUBCFG
 }

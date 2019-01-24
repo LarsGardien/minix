@@ -7,9 +7,9 @@
 #include <sys/signal.h>
 #include <sys/types.h>
 
-/*==========================================================================* 
+/*==========================================================================*
  * Types relating to messages. 						    *
- *==========================================================================*/ 
+ *==========================================================================*/
 
 #define M_PATH_STRING_MAX  40
 #define CTL_SHORTNAME 8 /* max sysctl(2) name length that fits in message */
@@ -114,6 +114,38 @@ typedef struct {
 	uint8_t padding[32];
 } mess_ds_req;
 _ASSERT_MSG_SIZE(mess_ds_req);
+
+typedef struct mess_ss_add_req{
+	vir_bytes prefix;
+	size_t prefix_strlen;
+	vir_bytes actions;
+	size_t actions_blklen;
+  int nr_actions;
+  vir_bytes transition_indices;
+  vir_bytes fifo_filename;
+  size_t fifo_filename_strlen;
+	uint8_t padding[24];
+} mess_ss_add_req;
+_ASSERT_MSG_SIZE(mess_ss_add_req);
+
+typedef struct mess_ss_update_req{
+  vir_bytes sensitivities;
+  int nr_sensitivities;
+  uint8_t padding[48];
+} mess_ss_update_req;
+_ASSERT_MSG_SIZE(mess_ss_update_req);
+
+typedef struct mess_ss_sync_req{
+  int transition_index;
+  uint8_t padding[52];
+} mess_ss_sync_req;
+_ASSERT_MSG_SIZE(mess_ss_sync_req);
+
+typedef struct mess_ss_sync_not{
+  int transition_index;
+  uint8_t padding[52];
+} mess_ss_sync_not;
+_ASSERT_MSG_SIZE(mess_ss_sync_not);
 
 typedef struct {
 	off_t seek_pos;
@@ -2419,6 +2451,10 @@ typedef struct noxfer_message {
 
 		mess_ds_reply		m_ds_reply;
 		mess_ds_req		m_ds_req;
+    mess_ss_add_req m_ss_add_req;
+    mess_ss_update_req m_ss_update_req;
+    mess_ss_sync_req m_ss_sync_req;
+    mess_ss_sync_not m_ss_sync_not;
 		mess_fs_vfs_breadwrite	m_fs_vfs_breadwrite;
 		mess_fs_vfs_chmod	m_fs_vfs_chmod;
 		mess_fs_vfs_chown	m_fs_vfs_chown;
@@ -2737,9 +2773,9 @@ typedef int _ASSERT_message[/* CONSTCOND */sizeof(message) == 64 ? 1 : -1];
 #define m10_ull1 m_m10.m10ull1
 
 
-/*==========================================================================* 
+/*==========================================================================*
  * Minix run-time system (IPC). 					    *
- *==========================================================================*/ 
+ *==========================================================================*/
 
 /* Datastructure for asynchronous sends */
 typedef struct asynmsg
