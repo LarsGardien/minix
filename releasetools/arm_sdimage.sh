@@ -182,6 +182,7 @@ cat >${WORK_DIR}/boot.mtree <<EOF
 ./vm.elf type=file
 ./pfs.elf type=file
 ./mfs.elf type=file
+./ss.elf type=file
 ./init.elf type=file
 EOF
 

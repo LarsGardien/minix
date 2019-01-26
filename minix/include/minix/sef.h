@@ -384,4 +384,3 @@ int sef_llvm_ltckpt_restart(int type, sef_init_info_t *info);
 #endif
 
 #endif /* _SEF_H */
-

@@ -397,4 +397,3 @@ char* sef_debug_header(void)
   return sef_debug_header_buff;
 }
 #endif /*SEF_INIT_DEBUG || SEF_LU_DEBUG || SEF_PING_DEBUG || SEF_SIGNAL_DEBUG*/
-

@@ -83,7 +83,8 @@
 #define TCS34725B2S29_MAJOR	  136	/* 136 = /dev/tcs34725b2s29 (tcs34725)   */
 #define TCS34725B3S29_MAJOR	  137	/* 137 = /dev/tcs34725b3s29 (tcs34725)   */
 
-#define NR_DEVICES   		 138	/* number of (major) devices */
+/*unused: 138-145*/
+#define NR_DEVICES   		 146	/* number of (major) devices */
 
 /* Minor device numbers for memory driver. */
 #  define RAM_DEV_OLD  		   0	/* minor device for /dev/ram */
