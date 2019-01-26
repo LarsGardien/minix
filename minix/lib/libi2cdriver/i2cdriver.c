@@ -196,6 +196,33 @@ i2cdriver_exec(endpoint_t bus_endpoint, minix_i2c_ioctl_exec_t * ioctl_exec)
 	return m.m_type;
 }
 
+static int
+i2cdriver_mux(endpoint_t mux_endpoint, int type, uint8_t channel)
+{
+	int r;
+	message m;
+
+	m.m_type = type;
+	m.m_li2cdriver_i2c_busc_i2c_mux.channel = channel;
+
+	r = ipc_sendrec(mux_endpoint, &m);
+	if (r != OK)	{
+		return EIO;
+	}
+
+	return m.m_type; /* return reply code OK, EBUSY, EINVAL, etc. */
+}
+
+int i2cdriver_mux_select(endpoint_t mux_endpoint, uint8_t channel)
+{
+	return i2cdriver_mux(mux_endpoint, BUSC_I2C_MUX_SELECT, channel);
+}
+
+int i2cdriver_mux_deselect(endpoint_t mux_endpoint, uint8_t channel)
+{
+	return i2cdriver_mux(mux_endpoint, BUSC_I2C_MUX_DESELECT, channel);
+}
+
 int
 i2creg_read(endpoint_t bus_endpoint, i2c_addr_t address, uint8_t *cmd,
 	size_t cmdlen, uint8_t *val, size_t vallen)

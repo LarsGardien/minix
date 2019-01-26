@@ -445,7 +445,7 @@ int sef_cb_init_lu_generic(int type, sef_init_info_t *info)
 
   /* Resort to restart callback for identity updates. */
   if(SEF_LU_IS_IDENTITY_UPDATE(info->flags)) {
-      return sef_cb_init_lu_identity_as_restart(type, info); 
+      return sef_cb_init_lu_identity_as_restart(type, info);
   }
 
   /* Perform state transfer updates in all the other cases. */

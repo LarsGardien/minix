@@ -6,6 +6,7 @@ SUBDIR+=	clock
 SUBDIR+=	eeprom
 SUBDIR+=	examples
 SUBDIR+=	iommu
+SUBDIR+=  mux
 SUBDIR+=	net
 SUBDIR+=	power
 SUBDIR+=	printer
