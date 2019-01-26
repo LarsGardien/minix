@@ -30,6 +30,8 @@ static int check_reservation(endpoint_t endpt, int slave_addr);
 static void update_reservation(endpoint_t endpt, char *key);
 static void ds_event(void);
 
+static int sef_cb_lu_state_save(int UNUSED(result), int UNUSED(flags));
+
 static int do_mux_i2c_ioctl_exec(endpoint_t caller, cp_grant_id_t grant_nr);
 
 static int env_parse_muxinstance(void);
@@ -66,28 +68,6 @@ static struct chardriver i2c_tab = {
 	.cdr_ioctl	= mux_i2c_ioctl,
 	.cdr_other	= mux_i2c_other
 };
-
-static int
-sef_cb_lu_state_save(int UNUSED(result), int UNUSED(flags))
-{
-	int r;
-	char key[DS_MAX_KEYLEN];
-
-	printf("in sef_cb_lu_state_save\n" );
-
-	memset(key, '\0', DS_MAX_KEYLEN);
-	snprintf(key, DS_MAX_KEYLEN, "i2c.%d.i2cdev", i2c_bus_id + 1);
-	r = ds_publish_mem(key, i2cdev, sizeof(i2cdev), DSF_OVERWRITE);
-	if (r != OK) {
-		log_warn(&log, "ds_publish_mem(%s) failed (r=%d)\n", key, r);
-		return r;
-	}
-
-	log_debug(&log, "State Saved\n");
-	printf("exit sef_cb_lu_state_save\n" );
-
-	return OK;
-}
 
 /*
  * Claim an unclaimed device for exclusive use by endpt. This function can
@@ -335,17 +315,30 @@ ds_event(void)
 }
 
 static int
-lu_state_restore(void)
+sef_cb_lu_state_save(int UNUSED(result), int UNUSED(flags))
 {
 	int r;
 	char key[DS_MAX_KEYLEN];
-	size_t size;
 
-	printf("in lu_state_restore\n");
+	memset(key, '\0', DS_MAX_KEYLEN);
+	snprintf(key, DS_MAX_KEYLEN, "i2c.%d.i2cdev", i2c_bus_id + 1);
+	r = ds_publish_mem(key, i2cdev, sizeof(i2cdev), DSF_OVERWRITE);
+	if (r != OK) {
+		log_warn(&log, "ds_publish_mem(%s) failed (r=%d)\n", key, r);
+		return r;
+	}
 
-	env_parse_muxinstance();
+	log_debug(&log, "State Saved\n");
 
-	size = sizeof(i2cdev);
+	return OK;
+}
+
+static int
+sef_cb_lu_state_restore(void)
+{
+	int r;
+	char key[DS_MAX_KEYLEN];
+	size_t size = sizeof(i2cdev);
 
 	memset(key, '\0', DS_MAX_KEYLEN);
 	snprintf(key, DS_MAX_KEYLEN, "i2c.%d.i2cdev", i2c_bus_id + 1);
@@ -358,8 +351,6 @@ lu_state_restore(void)
 
 	log_debug(&log, "State Restored\n");
 
-	printf("exit lu_state_restore\n");
-
 	return OK;
 }
 
@@ -368,12 +359,15 @@ sef_cb_init(int type, sef_init_info_t * UNUSED(info))
 {
 	int r;
 	char regex[DS_MAX_KEYLEN];
-
-	printf("in sef_cb_init\n");
+	r = env_parse_muxinstance();
+	if(r != OK){
+		log_warn(&log, "env_parse_muxinstance failed\n");
+		return r;
+	}
 
 	if (type != SEF_INIT_FRESH) {
 		/* Restore a prior state. */
-		lu_state_restore();
+		sef_cb_lu_state_restore();
 	}
 
 	/* Announce we are up when necessary. */
@@ -396,7 +390,6 @@ sef_cb_init(int type, sef_init_info_t * UNUSED(info))
 	/* Save state */
 	sef_cb_lu_state_save(0, 0);
 
-	printf("exit sef_cb_init\n");
 	/* Initialization completed successfully. */
 	return OK;
 }
@@ -410,14 +403,10 @@ sef_local_startup()
 	sef_setcb_init_restart(sef_cb_init);
 
 	/* Register live update callbacks */
-	printf("pre sef state save()\n");
 	sef_setcb_lu_state_save(sef_cb_lu_state_save);
-	printf("post sef state save()\n");
 
 	/* Let SEF perform startup. */
-	printf("pre sef_startup()\n");
 	sef_startup();
-	printf("post sef_startup()\n");
 }
 
 static int
@@ -479,20 +468,9 @@ main(int argc, char *argv[])
 
 	env_setargs(argc, argv);
 
-	r = env_parse_muxinstance();
-	if (r != OK) {
-		return r;
-	}
-
-	printf("instance: %d; parentEP: %d; channel: %d; muxEP: %d\n",
-					i2c_bus_id+1,
-					parent_bus_endpoint,
-					channel,
-					mux_endpoint);
-
 	memset(i2cdev, '\0', sizeof(i2cdev));
 	sef_local_startup();
-	printf("after sef_local_startup.\n");
+
 	chardriver_task(&i2c_tab);
 
 	return OK;

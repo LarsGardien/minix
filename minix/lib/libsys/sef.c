@@ -131,7 +131,6 @@ void sef_startup()
       } while(!IS_SEF_INIT_REQUEST(&m, status));
 
       /* Process initialization request for this system service. */
-      printf("doing sef_init_request\n");
       if((r = do_sef_init_request(&m)) != OK) {
           panic("unable to process init request: %d", r);
       }

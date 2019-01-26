@@ -10,6 +10,6 @@ FILESDIR= /etc/system.conf.d
 DPADD+=	${LIBI2CDRIVER} ${LIBCHARDRIVER} ${LIBSYS} ${LIBTIMERS}
 LDADD+=	-li2cdriver -lchardriver -lsys -ltimers
 
-CPPFLAGS+=	-I${NETBSDSRCDIR}
+CPPFLAGS+= -I${NETBSDSRCDIR}
 
 .include <minix.service.mk>
