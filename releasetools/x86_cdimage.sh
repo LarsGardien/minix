@@ -57,7 +57,8 @@ load=/boot/minix_default/mod08_mib
 load=/boot/minix_default/mod09_vm
 load=/boot/minix_default/mod10_pfs
 load=/boot/minix_default/mod11_mfs
-load=/boot/minix_default/mod12_init
+load=/boot/minix_default/mod12_ss
+load=/boot/minix_default/mod13_init
 END_BOOT_CFG
 add_file_spec "boot.cfg" extra.cdfiles
 

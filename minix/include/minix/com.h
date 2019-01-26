@@ -67,7 +67,8 @@
 #define VM_PROC_NR   ((endpoint_t) 8)   /* memory server */
 #define PFS_PROC_NR  ((endpoint_t) 9)  /* pipe filesystem */
 #define MFS_PROC_NR  ((endpoint_t) 10)  /* minix root filesystem */
-#define LAST_SPECIAL_PROC_NR	11	/* An untyped version for
+#define SS_PROC_NR   ((endpoint_t) 11) /* synchronisation server */
+#define LAST_SPECIAL_PROC_NR	12	/* An untyped version for
                                            computation in macros.*/
 #define INIT_PROC_NR ((endpoint_t) LAST_SPECIAL_PROC_NR)  /* init
                                                         -- goes multiuser */
@@ -508,6 +509,13 @@
 #define DS_SNAPSHOT	(DS_RQ_BASE + 5)	/* take a snapshot */
 #define DS_RETRIEVE_LABEL  (DS_RQ_BASE + 6)	/* retrieve label's name */
 #define DS_GETSYSINFO	(DS_RQ_BASE + 7)	/* get system information */
+
+#define SS_RQ_BASE    0x880
+
+#define SS_ALPHABET (SS_RQ_BASE + 0) /*add a transition to process alphabet*/
+#define SS_SENSITIVITY (SS_RQ_BASE + 1) /*update process sensitivity*/
+#define SS_SYNCHRONISE (SS_RQ_BASE + 2) /*perform a transition*/
+#define SS_DELETE (SS_RQ_BASE + 3) /*delete a process from SS*/
 
 /*===========================================================================*
  *                Messages used between PM and VFS			     *
