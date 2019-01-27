@@ -1011,8 +1011,9 @@ _ASSERT_MSG_SIZE(mess_lexec_pm_exec_new);
 
 typedef struct {
 	cp_grant_id_t grant;
+	uint8_t mux_exec;
 
-	uint8_t padding[52];
+	uint8_t padding[51];
 } mess_li2cdriver_i2c_busc_i2c_exec;
 _ASSERT_MSG_SIZE(mess_li2cdriver_i2c_busc_i2c_exec);
 
@@ -1021,8 +1022,9 @@ typedef struct {
 			  to get it I would need to include
 			  sys/dev/i2c/i2c_io.h, which I am not sure is a good
 			  idea to have everywhere. */
+	uint8_t mux_reserve;
 
-	uint8_t padding[54];
+	uint8_t padding[53];
 } mess_li2cdriver_i2c_busc_i2c_reserve;
 _ASSERT_MSG_SIZE(mess_li2cdriver_i2c_busc_i2c_reserve);
 

@@ -25,14 +25,16 @@
 #define NR_I2CDEV (0x3ff)
 
 /* local function prototypes */
-static int do_reserve(endpoint_t endpt, int slave_addr);
-static int check_reservation(endpoint_t endpt, int slave_addr);
+static int check_reservation(endpoint_t endpt, int slave_addr,
+					uint8_t is_mux_reserve);
 static void update_reservation(endpoint_t endpt, char *key);
 static void ds_event(void);
 
 static int sef_cb_lu_state_save(int UNUSED(result), int UNUSED(flags));
 
-static int do_mux_i2c_ioctl_exec(endpoint_t caller, cp_grant_id_t grant_nr);
+static int do_mux_i2c_reserve(message *m);
+static int do_mux_i2c_ioctl_exec(endpoint_t caller, cp_grant_id_t grant_nr,
+			uint8_t is_mux_exec);
 
 static int env_parse_muxinstance(void);
 
@@ -50,6 +52,7 @@ static uint32_t i2c_bus_id;
 static struct i2cdev
 {
 	uint8_t inuse;
+	int mux_inuse; /*Count how often address is reserved by child muxes*/
 	endpoint_t endpt;
 	char key[DS_MAX_KEYLEN];
 } i2cdev[NR_I2CDEV];
@@ -77,46 +80,73 @@ static struct chardriver i2c_tab = {
  * the same device it reserved before.
  */
 static int
-do_reserve(endpoint_t endpt, int slave_addr)
+do_mux_i2c_reserve(message *m)
 {
 	int r;
 	char key[DS_MAX_KEYLEN];
 	char label[DS_MAX_KEYLEN];
 
-	/* find the label for the endpoint */
-	r = ds_retrieve_label_name(label, endpt);
-	if (r != OK) {
-		log_warn(&log, "Couldn't find label for endpt='0x%x'\n",
-		    endpt);
-		return r;
-	}
-
-	/* construct the key i2cdriver_announce published (saves an IPC call) */
-	snprintf(key, DS_MAX_KEYLEN, "drv.i2c.%d.%s", i2c_bus_id + 1, label);
+	int slave_addr = m->m_li2cdriver_i2c_busc_i2c_reserve.addr;
 
 	if (slave_addr < 0 || slave_addr >= NR_I2CDEV) {
-		log_debug(&log,
+		log_warn(&log,
 		    "slave address must be positive & no more than 10 bits\n");
 		return EINVAL;
 	}
 
-	/* check if device is in use by another driver */
-	if (i2cdev[slave_addr].inuse != 0
-	    && strncmp(i2cdev[slave_addr].key, key, DS_MAX_KEYLEN) != 0) {
-		log_debug(&log, "address in use by '%s'/0x%x\n",
-		    i2cdev[slave_addr].key, i2cdev[slave_addr].endpt);
+	uint8_t is_mux_reserve = m->m_li2cdriver_i2c_busc_i2c_reserve.mux_reserve;
+	/*Forward as mux reserve*/
+	m->m_li2cdriver_i2c_busc_i2c_reserve.mux_reserve = 1;
+	r = ipc_sendrec(parent_bus_endpoint, m);
+	if(r != OK){
+		log_warn(&log, "could not reserve address on parent bus\n");
 		return EBUSY;
 	}
 
-	/* device is free or already owned by us, claim it */
-	i2cdev[slave_addr].inuse = 1;
-	i2cdev[slave_addr].endpt = endpt;
-	memcpy(i2cdev[slave_addr].key, key, DS_MAX_KEYLEN);
+	if(is_mux_reserve){
+		/*Check if device is in use by another driver*/
+		if(i2cdev[slave_addr].inuse != 0){
+			log_warn(&log, "address in use by '%s'/0x%x\n",
+			    i2cdev[slave_addr].key, i2cdev[slave_addr].endpt);
+				return EBUSY;
+		}
+		/*Reserve device for a multiplexed driver*/
+		i2cdev[slave_addr].mux_inuse += 1;
+	} else {
+		/* find the label for the endpoint */
+		r = ds_retrieve_label_name(label, m->m_source);
+		if (r != OK) {
+			log_warn(&log, "Couldn't find label for endpt='0x%x'\n",
+					m->m_source);
+			return r;
+		}
+		/* construct the key i2cdriver_announce published (saves an IPC call) */
+		snprintf(key, DS_MAX_KEYLEN, "drv.i2c.%d.%s", i2c_bus_id + 1, label);
+
+		/*Check if device is in use by another driver */
+		if (i2cdev[slave_addr].inuse != 0
+		    && strncmp(i2cdev[slave_addr].key, key, DS_MAX_KEYLEN) != 0) {
+			log_warn(&log, "address in use by '%s'/0x%x\n",
+			    i2cdev[slave_addr].key, i2cdev[slave_addr].endpt);
+			return EBUSY;
+		}
+		/*Check if device is in use by a multiplexed driver*/
+		else if(i2cdev[slave_addr].mux_inuse > 0){
+			log_warn(&log, "address in use by %d multiplexed interfaces.\n",
+			    i2cdev[slave_addr].mux_inuse);
+			return EBUSY;
+		}
+
+		/* device is free or already owned by us, claim it */
+		i2cdev[slave_addr].inuse = 1;
+		i2cdev[slave_addr].endpt = m->m_source;
+		memcpy(i2cdev[slave_addr].key, key, DS_MAX_KEYLEN);
+	}
 
 	sef_cb_lu_state_save(0, 0);	/* save reservations */
 
 	log_debug(&log, "Device 0x%x claimed by 0x%x key='%s'\n",
-	    slave_addr, endpt, key);
+	    slave_addr, m->m_source, key);
 
 	return OK;
 }
@@ -129,7 +159,7 @@ do_reserve(endpoint_t endpt, int slave_addr)
  * same driver).
  */
 static int
-check_reservation(endpoint_t endpt, int slave_addr)
+check_reservation(endpoint_t endpt, int slave_addr, uint8_t is_mux_reserve)
 {
 	if (slave_addr < 0 || slave_addr >= NR_I2CDEV) {
 		log_debug(&log,
@@ -142,12 +172,14 @@ check_reservation(endpoint_t endpt, int slave_addr)
 		    "allowing ioctl() from VFS to access unclaimed device\n");
 		return OK;
 	}
-
-	if (i2cdev[slave_addr].inuse && i2cdev[slave_addr].endpt != endpt) {
-		log_debug(&log, "device reserved by another endpoint\n");
+	if(is_mux_reserve && i2cdev[slave_addr].mux_inuse > 0){
+		log_debug(&log, "allowing access to multiplexed device\n");
+		return OK;
+	}	else if (i2cdev[slave_addr].inuse && i2cdev[slave_addr].endpt != endpt) {
+		log_warn(&log, "device reserved by another endpoint\n");
 		return EBUSY;
 	} else if (i2cdev[slave_addr].inuse == 0) {
-		log_debug(&log,
+		log_warn(&log,
 		    "all drivers sending messages directly to this driver must reserve\n");
 		return EPERM;
 	} else {
@@ -165,6 +197,7 @@ static void
 update_reservation(endpoint_t endpt, char *key)
 {
 	int i;
+	message m;
 
 	log_debug(&log, "Updating reservation for '%s' endpt=0x%x\n", key,
 	    endpt);
@@ -175,49 +208,64 @@ update_reservation(endpoint_t endpt, char *key)
 		if (i2cdev[i].inuse != 0
 		    && strncmp(i2cdev[i].key, key, DS_MAX_KEYLEN) == 0) {
 			/* update reservation with new endpoint */
-			do_reserve(endpt, i);
+			memset(&m, 0, sizeof(m));
+			m.m_li2cdriver_i2c_busc_i2c_reserve.addr = i;
+			m.m_li2cdriver_i2c_busc_i2c_reserve.mux_reserve = 0;
+			m.m_source = endpt;
+			do_mux_i2c_reserve(&m);
 			log_debug(&log, "Found device to update 0x%x\n", i);
 		}
 	}
 }
 
 static int
-do_mux_i2c_ioctl_exec(endpoint_t caller, cp_grant_id_t grant_nr)
+do_mux_i2c_ioctl_exec(endpoint_t caller, cp_grant_id_t grant_nr,
+					uint8_t is_mux_reserve)
 {
 	int r;
 	message m;
 	cp_grant_id_t indir_grant;
 
+	/* permission check */
+	/*r = check_reservation(caller, ioctl_exec.iie_addr, is_mux_reserve);
+	if (r != OK) {
+		log_warn(&log, "check_reservation() denied the request\n");
+		goto deselect;
+	}*/
+
 	r = i2cdriver_mux_select(mux_endpoint, channel);
 	if(r != OK) {
 		log_warn(&log, "Failed i2cdriver_mux_select()\n");
-		return r;
+		goto deselect;
 	}
 
 	indir_grant = cpf_grant_indirect(parent_bus_endpoint, caller, grant_nr);
 	if (!GRANT_VALID(indir_grant)) {
 		log_warn(&log, "Failed cpf_grant_indirect()\n");
-		return r;
+		r = -1;
+		goto deselect;
 	}
 
 	memset(&m, '\0', sizeof(message));
 	m.m_type = BUSC_I2C_EXEC;
 	m.m_li2cdriver_i2c_busc_i2c_exec.grant = indir_grant;
+	m.m_li2cdriver_i2c_busc_i2c_exec.mux_exec = 1;
 
 	r = ipc_sendrec(parent_bus_endpoint, &m);
 	cpf_revoke(indir_grant);
 	if (r != OK) {
 		log_warn(&log, " Failed ipc_sendrec()\n");
-		return r;
+		goto deselect;
 	}
 
+deselect:
 	r = i2cdriver_mux_deselect(mux_endpoint, channel);
 	if(r != OK) {
 		log_warn(&log, "Failed i2cdriver_mux_deselect()\n");
 		return r;
 	}
 
-	return OK;
+	return r;
 }
 
 static int
@@ -229,7 +277,7 @@ mux_i2c_ioctl(devminor_t UNUSED(minor), unsigned long request, endpoint_t endpt,
 
 	switch (request) {
 	case MINIX_I2C_IOCTL_EXEC:
-		r = do_mux_i2c_ioctl_exec(endpt, grant);
+		r = do_mux_i2c_ioctl_exec(endpt, grant, 0);
 		break;
 	default:
 		log_warn(&log, "Invalid ioctl() 0x%x\n", request);
@@ -257,11 +305,12 @@ mux_i2c_other(message * m, int ipc_status)
 	switch (m->m_type) {
 	case BUSC_I2C_RESERVE:
 		/* reserve a device on the bus for exclusive access */
-		r = do_reserve(m->m_source, m->m_li2cdriver_i2c_busc_i2c_reserve.addr);
+		r = do_mux_i2c_reserve(m);
 		break;
 	case BUSC_I2C_EXEC:
 		/* handle request from another driver */
-		r = do_mux_i2c_ioctl_exec(m->m_source, m->m_li2cdriver_i2c_busc_i2c_exec.grant);
+		r = do_mux_i2c_ioctl_exec(m->m_source, m->m_li2cdriver_i2c_busc_i2c_exec.grant,
+									m->m_li2cdriver_i2c_busc_i2c_exec.mux_exec);
 		break;
 	default:
 		log_warn(&log, "Invalid message type (0x%x)\n", m->m_type);
