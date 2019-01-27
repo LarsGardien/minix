@@ -96,7 +96,7 @@
 ./etc/devmand/usb_storage.cfg                           minix-base
 ./etc/dhcpcd.conf                                       minix-base
 ./etc/eniac                                             minix-base
-./etc/eniac/tempfile.txt                                minix-base
+./etc/eniac/colour_sensor_startup.sh                    minix-base
 ./etc/fonts                                             minix-base      xorg
 ./etc/fonts/conf.avail                                  minix-base      xorg
 ./etc/fonts/conf.d                                      minix-base      xorg

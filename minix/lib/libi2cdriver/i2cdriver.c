@@ -51,7 +51,7 @@ i2cdriver_env_parse(uint32_t * bus, i2c_addr_t * address,
 	long int busl;
 	long int addressl;
 
-	r = env_parse("bus", "d", 0, &busl, 1, 3);
+	r = env_parse("bus", "d", 0, &busl, 1, 15);
 	if (r != EP_SET) {
 		return -1;
 	}
@@ -201,7 +201,8 @@ i2cdriver_mux(endpoint_t mux_endpoint, int type, uint8_t channel)
 {
 	int r;
 	message m;
-
+	
+	memset(&m, 0, sizeof(m));
 	m.m_type = type;
 	m.m_li2cdriver_i2c_busc_i2c_mux.channel = channel;
 

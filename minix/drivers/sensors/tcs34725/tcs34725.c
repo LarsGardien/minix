@@ -55,7 +55,6 @@ tcs34725_init(void)
 	uint8_t val;
 
 	/* Power on the device */
-	printf("tcs34725 init. 1937\n");
 	if((r = tcs34725_read8(TCS34725_ID, &val)) != OK)
 	{
 		log_warn(&log, "Failed to read device ID.\n");

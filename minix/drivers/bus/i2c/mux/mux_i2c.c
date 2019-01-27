@@ -217,7 +217,7 @@ do_mux_i2c_ioctl_exec(endpoint_t caller, cp_grant_id_t grant_nr)
 		return r;
 	}
 
-	return m.m_type;
+	return OK;
 }
 
 static int

@@ -8,6 +8,7 @@
 #include <minix/log.h>
 #include <minix/type.h>
 #include <minix/spin.h>
+#include <minix/com.h>
 
 /* logging - use with log_warn(), log_info(), log_debug(), log_trace(), etc */
 static struct log log = {
@@ -75,10 +76,11 @@ static int
 tca9548a_deselect(uint8_t channel)
 {
 	int r;
-	channel_mask ^= (1 << channel);
+
+	channel_mask &= ~(1 << channel);
 	r = i2creg_raw_write8(bus_endpoint, address, channel_mask);
 	if (r != OK) {
-		log_warn(&log, "Channel mask select failed.\n");
+		log_warn(&log, "Channel mask deselect failed.\n");
 		return -1;
 	}
 	return OK;
@@ -121,8 +123,6 @@ tca9548a_other(message * m, int ipc_status)
 
 	if ((r = ipc_send(m->m_source, &m_reply)) != OK)
 		log_warn(&log, "ipc_send() to %d failed: %d\n", m->m_source, r);
-
-	log_warn(&log, "Invalid message type (0x%x)\n", m->m_type);
 }
 
 static int

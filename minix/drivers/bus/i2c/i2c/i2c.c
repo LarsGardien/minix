@@ -121,7 +121,7 @@ do_reserve(endpoint_t endpt, int slave_addr)
 	snprintf(key, DS_MAX_KEYLEN, "drv.i2c.%d.%s", i2c_bus_id + 1, label);
 
 	if (slave_addr < 0 || slave_addr >= NR_I2CDEV) {
-		log_debug(&log,
+		log_warn(&log,
 		    "slave address must be positive & no more than 10 bits\n");
 		return EINVAL;
 	}
@@ -129,7 +129,7 @@ do_reserve(endpoint_t endpt, int slave_addr)
 	/* check if device is in use by another driver */
 	if (i2cdev[slave_addr].inuse != 0
 	    && strncmp(i2cdev[slave_addr].key, key, DS_MAX_KEYLEN) != 0) {
-		log_debug(&log, "address in use by '%s'/0x%x\n",
+		log_warn(&log, "address in use by '%s'/0x%x\n",
 		    i2cdev[slave_addr].key, i2cdev[slave_addr].endpt);
 		return EBUSY;
 	}
@@ -158,7 +158,7 @@ static int
 check_reservation(endpoint_t endpt, int slave_addr)
 {
 	if (slave_addr < 0 || slave_addr >= NR_I2CDEV) {
-		log_debug(&log,
+		log_warn(&log,
 		    "slave address must be positive & no more than 10 bits\n");
 		return EINVAL;
 	}
@@ -170,10 +170,10 @@ check_reservation(endpoint_t endpt, int slave_addr)
 	}
 
 	if (i2cdev[slave_addr].inuse && i2cdev[slave_addr].endpt != endpt) {
-		log_debug(&log, "device reserved by another endpoint\n");
+		log_warn(&log, "device reserved by another endpoint\n");
 		return EBUSY;
 	} else if (i2cdev[slave_addr].inuse == 0) {
-		log_debug(&log,
+		log_warn(&log,
 		    "all drivers sending messages directly to this driver must reserve\n");
 		return EPERM;
 	} else {
@@ -270,21 +270,21 @@ do_i2c_ioctl_exec(endpoint_t caller, cp_grant_id_t grant_nr)
 	/* input validation */
 	r = validate_ioctl_exec(&ioctl_exec);
 	if (r != OK) {
-		log_debug(&log, "Message validation failed\n");
+		log_warn(&log, "Message validation failed\n");
 		return r;
 	}
 
 	/* permission check */
 	r = check_reservation(caller, ioctl_exec.iie_addr);
 	if (r != OK) {
-		log_debug(&log, "check_reservation() denied the request\n");
+		log_warn(&log, "check_reservation() denied the request\n");
 		return r;
 	}
 
 	/* Call the device specific code to execute the action */
 	r = process(&ioctl_exec);
 	if (r != OK) {
-		log_debug(&log, "process() failed\n");
+		log_warn(&log, "process() failed\n");
 		return r;
 	}
 
