@@ -100,14 +100,12 @@ do_mux_i2c_reserve(message *m)
 	m_parent.m_type = BUSC_I2C_RESERVE;
 	m_parent.m_li2cdriver_i2c_busc_i2c_reserve.addr = slave_addr;
 	m_parent.m_li2cdriver_i2c_busc_i2c_reserve.mux_reserve = 1;
-	printf("mux_i2c: reserve on parent.\n");
+
 	r = ipc_sendrec(parent_bus_endpoint, &m_parent);
 	if(r != OK){
 		log_warn(&log, "could not reserve address on parent bus\n");
 		return EBUSY;
 	}
-	printf("mux_i2c: reserve parent returned. %d\n", m_parent.m_type);
-	printf("mux_i2c: reserve: %d - %d\n", m->m_source, m->m_li2cdriver_i2c_busc_i2c_reserve.mux_reserve);
 
 	if(m->m_li2cdriver_i2c_busc_i2c_reserve.mux_reserve){
 		/*Check if device is in use by another driver*/
@@ -117,7 +115,7 @@ do_mux_i2c_reserve(message *m)
 				return EBUSY;
 		}
 		/*Reserve device for a multiplexed driver*/
-		i2cdev[slave_addr].mux_inuse += 1;
+		i2cdev[slave_addr].mux_inuse = 1;
 	} else {
 		/* find the label for the endpoint */
 		r = ds_retrieve_label_name(label, m->m_source);
@@ -311,12 +309,10 @@ mux_i2c_other(message * m, int ipc_status)
 	switch (m->m_type) {
 	case BUSC_I2C_RESERVE:
 		/* reserve a device on the bus for exclusive access */
-		printf("mux_i2c: R: %d - %d - %d\n", m->m_source, m->m_li2cdriver_i2c_busc_i2c_reserve.addr, m->m_li2cdriver_i2c_busc_i2c_reserve.mux_reserve);
 		r = do_mux_i2c_reserve(m);
 		break;
 	case BUSC_I2C_EXEC:
 		/* handle request from another driver */
-		printf("mux_i2c: E: %d - %d\n", m->m_source, m->m_li2cdriver_i2c_busc_i2c_exec.mux_exec);
 		r = do_mux_i2c_ioctl_exec(m->m_source, m->m_li2cdriver_i2c_busc_i2c_exec.grant,
 									m->m_li2cdriver_i2c_busc_i2c_exec.mux_exec);
 		break;
