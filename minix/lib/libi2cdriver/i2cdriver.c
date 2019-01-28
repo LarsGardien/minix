@@ -161,8 +161,11 @@ i2cdriver_reserve_device(endpoint_t bus_endpoint, i2c_addr_t address)
 	int r;
 	message m;
 
+	memset(&m, '\0', sizeof(message));
+
 	m.m_type = BUSC_I2C_RESERVE;
 	m.m_li2cdriver_i2c_busc_i2c_reserve.addr = address;
+	m.m_li2cdriver_i2c_busc_i2c_reserve.mux_reserve = 0;
 
 	r = ipc_sendrec(bus_endpoint, &m);
 	if (r != OK) {
@@ -186,6 +189,7 @@ i2cdriver_exec(endpoint_t bus_endpoint, minix_i2c_ioctl_exec_t * ioctl_exec)
 
 	m.m_type = BUSC_I2C_EXEC;
 	m.m_li2cdriver_i2c_busc_i2c_exec.grant = grant_nr;
+	m.m_li2cdriver_i2c_busc_i2c_exec.mux_exec = 0;
 
 	r = ipc_sendrec(bus_endpoint, &m);
 	cpf_revoke(grant_nr);

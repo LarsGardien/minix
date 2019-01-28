@@ -118,6 +118,7 @@ do_reserve(endpoint_t endpt, int slave_addr, uint8_t is_mux_reserve)
 		return EINVAL;
 	}
 
+	printf("i2c: do_reserve: got reserve for %d - %d\n", slave_addr, is_mux_reserve);
 	if(is_mux_reserve){
 		/*Check if device is in use by another driver*/
 		if(i2cdev[slave_addr].inuse != 0){
@@ -127,6 +128,7 @@ do_reserve(endpoint_t endpt, int slave_addr, uint8_t is_mux_reserve)
 		}
 		/*Reserve device for a multiplexed driver*/
 		i2cdev[slave_addr].mux_inuse += 1;
+		printf("i2c: mux reserved. %d - %d\n", slave_addr, i2cdev[slave_addr].mux_inuse);
 	} else {
 		/* find the label for the endpoint */
 		r = ds_retrieve_label_name(label, endpt);
@@ -223,6 +225,7 @@ update_reservation(endpoint_t endpt, char *key)
 		if (i2cdev[i].inuse != 0
 		    && strncmp(i2cdev[i].key, key, DS_MAX_KEYLEN) == 0) {
 			/* update reservation with new endpoint */
+			printf("i2c: do update reserve %d\n", i);
 			do_reserve(endpt, i, 0);
 			log_debug(&log, "Found device to update 0x%x\n", i);
 		}
@@ -358,16 +361,18 @@ i2c_other(message * m, int ipc_status)
 	switch (m->m_type) {
 	case BUSC_I2C_RESERVE:
 		/* reserve a device on the bus for exclusive access */
+		printf("i2c: R: %d - %d - %d\n", m->m_source, m->m_li2cdriver_i2c_busc_i2c_reserve.addr, m->m_li2cdriver_i2c_busc_i2c_reserve.mux_reserve);
 		r = do_reserve(m->m_source, m->m_li2cdriver_i2c_busc_i2c_reserve.addr,
-										m->m_li2cdriver_i2c_busc_i2c_reserve.mux_reserve);
+				m->m_li2cdriver_i2c_busc_i2c_reserve.mux_reserve);
 		break;
 	case BUSC_I2C_EXEC:
 		/* handle request from another driver */
+		printf("i2c: E: %d - %d\n", m->m_source, m->m_li2cdriver_i2c_busc_i2c_exec.mux_exec);
 		r = do_i2c_ioctl_exec(m->m_source, m->m_li2cdriver_i2c_busc_i2c_exec.grant,
-										m->m_li2cdriver_i2c_busc_i2c_exec.mux_exec);
+					m->m_li2cdriver_i2c_busc_i2c_exec.mux_exec);
 		break;
 	default:
-		log_warn(&log, "Invalid message type (0x%x)\n", m->m_type);
+		/*log_warn(&log, "Invalid message type (0x%x)\n", m->m_type);*/
 		r = EINVAL;
 		break;
 	}
@@ -377,7 +382,7 @@ i2c_other(message * m, int ipc_status)
 	/* Send a reply. */
 	memset(&m_reply, 0, sizeof(m_reply));
 	m_reply.m_type = r;
-
+	printf("i2c: sending reply: %d - %d\n", m->m_source, r);
 	if ((r = ipc_send(m->m_source, &m_reply)) != OK)
 		log_warn(&log, "ipc_send() to %d failed: %d\n", m->m_source, r);
 }

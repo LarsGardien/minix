@@ -1,3 +1,3 @@
 #beaglebone (and black)
-U_BOOT_BIN_DIR=build/omap3_beagle/
-CONSOLE=tty02
+U_BOOT_BIN_DIR=build/am335x_evm/
+CONSOLE=tty00

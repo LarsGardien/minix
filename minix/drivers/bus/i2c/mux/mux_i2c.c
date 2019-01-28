@@ -83,6 +83,7 @@ static int
 do_mux_i2c_reserve(message *m)
 {
 	int r;
+	message m_parent;
 	char key[DS_MAX_KEYLEN];
 	char label[DS_MAX_KEYLEN];
 
@@ -94,16 +95,21 @@ do_mux_i2c_reserve(message *m)
 		return EINVAL;
 	}
 
-	uint8_t is_mux_reserve = m->m_li2cdriver_i2c_busc_i2c_reserve.mux_reserve;
 	/*Forward as mux reserve*/
-	m->m_li2cdriver_i2c_busc_i2c_reserve.mux_reserve = 1;
-	r = ipc_sendrec(parent_bus_endpoint, m);
+	memset(&m_parent, 0, sizeof(m_parent));
+	m_parent.m_type = BUSC_I2C_RESERVE;
+	m_parent.m_li2cdriver_i2c_busc_i2c_reserve.addr = slave_addr;
+	m_parent.m_li2cdriver_i2c_busc_i2c_reserve.mux_reserve = 1;
+	printf("mux_i2c: reserve on parent.\n");
+	r = ipc_sendrec(parent_bus_endpoint, &m_parent);
 	if(r != OK){
 		log_warn(&log, "could not reserve address on parent bus\n");
 		return EBUSY;
 	}
+	printf("mux_i2c: reserve parent returned. %d\n", m_parent.m_type);
+	printf("mux_i2c: reserve: %d - %d\n", m->m_source, m->m_li2cdriver_i2c_busc_i2c_reserve.mux_reserve);
 
-	if(is_mux_reserve){
+	if(m->m_li2cdriver_i2c_busc_i2c_reserve.mux_reserve){
 		/*Check if device is in use by another driver*/
 		if(i2cdev[slave_addr].inuse != 0){
 			log_warn(&log, "address in use by '%s'/0x%x\n",
@@ -305,15 +311,17 @@ mux_i2c_other(message * m, int ipc_status)
 	switch (m->m_type) {
 	case BUSC_I2C_RESERVE:
 		/* reserve a device on the bus for exclusive access */
+		printf("mux_i2c: R: %d - %d - %d\n", m->m_source, m->m_li2cdriver_i2c_busc_i2c_reserve.addr, m->m_li2cdriver_i2c_busc_i2c_reserve.mux_reserve);
 		r = do_mux_i2c_reserve(m);
 		break;
 	case BUSC_I2C_EXEC:
 		/* handle request from another driver */
+		printf("mux_i2c: E: %d - %d\n", m->m_source, m->m_li2cdriver_i2c_busc_i2c_exec.mux_exec);
 		r = do_mux_i2c_ioctl_exec(m->m_source, m->m_li2cdriver_i2c_busc_i2c_exec.grant,
 									m->m_li2cdriver_i2c_busc_i2c_exec.mux_exec);
 		break;
 	default:
-		log_warn(&log, "Invalid message type (0x%x)\n", m->m_type);
+		/*log_warn(&log, "Invalid message type (0x%x)\n", m->m_type);*/
 		r = EINVAL;
 		break;
 	}

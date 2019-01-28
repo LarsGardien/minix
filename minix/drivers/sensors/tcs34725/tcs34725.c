@@ -122,6 +122,7 @@ tcs34725_read_hook(devminor_t UNUSED(minor), u64_t position, endpoint_t endpt,
 	uint16_t c = 0, r = 0, g = 0, b = 0;
 
 	if(position != 0){
+		printf("tcs34725: pos %d returning eof\n", position); 
 		return 0; /*EOF*/
 	}
 
@@ -132,6 +133,13 @@ tcs34725_read_hook(devminor_t UNUSED(minor), u64_t position, endpoint_t endpt,
 		log_warn(&log, "Failed to read from device.\n");
 		return -1;
 	}
+
+	c = (rgbc[1] << 8) | rgbc[0];
+	r = (rgbc[3] << 8) | rgbc[2];
+	g = (rgbc[5] << 8) | rgbc[4];
+	b = (rgbc[7] << 8) | rgbc[6];
+
+	printf("%d: R %d; G %d; B %d; C %d;\n", bus_endpoint, r, g, b, c);
 
 	ret = sys_safecopyto(endpt, grant, 0, (vir_bytes)rgbc, 8);
 
