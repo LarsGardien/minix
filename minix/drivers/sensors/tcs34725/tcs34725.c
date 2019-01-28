@@ -119,31 +119,34 @@ tcs34725_read_hook(devminor_t UNUSED(minor), u64_t position, endpoint_t endpt,
     cp_grant_id_t grant, size_t size, int UNUSED(flags), cdev_id_t UNUSED(id))
 {
 	int ret;
+	char *ptr;
+	uint8_t rgbc[8];
 	uint16_t c = 0, r = 0, g = 0, b = 0;
 
-	if(position != 0){
-		printf("tcs34725: pos %d returning eof\n", position); 
-		return 0; /*EOF*/
-	}
-
-	uint8_t rgbc[8];
 	uint8_t command[] = {TCS34725_COMMAND_BIT | TCS34725_CDATAL};
 	if((ret = i2creg_read(bus_endpoint, address, command, 1, rgbc, 8)) != OK)
 	{
 		log_warn(&log, "Failed to read from device.\n");
 		return -1;
 	}
-
 	c = (rgbc[1] << 8) | rgbc[0];
 	r = (rgbc[3] << 8) | rgbc[2];
 	g = (rgbc[5] << 8) | rgbc[4];
 	b = (rgbc[7] << 8) | rgbc[6];
-
 	printf("%d: R %d; G %d; B %d; C %d;\n", bus_endpoint, r, g, b, c);
 
-	ret = sys_safecopyto(endpt, grant, 0, (vir_bytes)rgbc, 8);
+	if(position >= sizeof(rgbc)) return 0;	/* EOF */
+	if(position + size >= sizeof(rgbc)){
+		size = (size_t)(sizeof(rgbc) - position);
+	}
 
-	return (ret != OK) ? ret : 8;
+	ptr = rgbc + position;
+	if((ret = sys_safecopyto(endpt, grant, 0, (vir_bytes)ptr, size)) != OK) {
+		return ret;
+	}
+
+	/* Return the number of bytes read. */
+	return size;
 }
 
 static void
