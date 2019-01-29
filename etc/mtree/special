@@ -64,6 +64,11 @@
 ./etc/disktab			type=file mode=0644
 ./etc/dm.conf			type=file mode=0644
 ./etc/dumpdates			type=file mode=0664 gname=operator optional tags=exclude
+./etc/eniac         type=dir mode=0755
+./etc/eniac/colour_sensor type=dir mode=0755
+./etc/eniac/colour_sensor/colour_sensor_hds type=dir mode=0755
+./etc/eniac/colour_sensor/colour_sensor_startup type=file mode=0644
+./etc/eniac/colour_sensor/colour_sensor/colour_sensor_hds/colour_sensor_hds type=file mode=0644
 ./etc/envsys.conf		type=file mode=0644 optional
 ./etc/ethers			type=file mode=0644 optional
 ./etc/exports			type=file mode=0644 optional

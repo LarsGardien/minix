@@ -18,9 +18,9 @@ SUBDIR+=	tests
 SUBDIR+=	usr.bin
 SUBDIR+=	usr.sbin
 
+SUBDIR+=	eniac
+
 # BJG - build drivers last as the ramdisk depends on some other drivers
 SUBDIR+=	.WAIT drivers
-
-SUBDIR+=	eniac
 
 .include <bsd.subdir.mk>
