@@ -7,14 +7,14 @@ mknod /dev/i2c-8 c 142 0
 mknod /dev/i2c-9 c 143 0
 mknod /dev/i2c-10 c 144 0
 mknod /dev/i2c-11 c 145 0
-mknod /dev/tcs34725.4.29 c 146 0
-mknod /dev/tcs34725.5.29 c 147 0
-mknod /dev/tcs34725.6.29 c 148 0
-mknod /dev/tcs34725.7.29 c 149 0
-mknod /dev/tcs34725.8.29 c 150 0
-mknod /dev/tcs34725.9.29 c 151 0
-mknod /dev/tcs34725.10.29 c 152 0
-mknod /dev/tcs34725.11.29 c 153 0
+mknod /dev/tcs34725b4s29 c 146 0
+mknod /dev/tcs34725b5s29 c 147 0
+mknod /dev/tcs34725b6s29 c 148 0
+mknod /dev/tcs34725b7s29 c 149 0
+mknod /dev/tcs34725b8s29 c 150 0
+mknod /dev/tcs34725b9s29 c 151 0
+mknod /dev/tcs34725b10s29 c 152 0
+mknod /dev/tcs34725b11s29 c 153 0
 
 minix-service up /service/tca9548a -label tca9548a.3.70 -args 'bus=3 address=0x70'
 
@@ -28,10 +28,10 @@ minix-service up /service/mux_i2c -dev /dev/i2c-10 -label i2c.10 -args 'instance
 minix-service up /service/mux_i2c -dev /dev/i2c-11 -label i2c.11 -args 'instance=11 parent-instance=3 channel=7 mux=tca9548a.3.70'
 
 minix-service up /service/tcs34725 -dev /dev/tcs34725b4s29 -label tcs34725.4.29 -args 'bus=4 address=0x29'
-minix-service up /service/tcs34725 -dev /dev/tcs34725b5s29 -label tcs34725.4.29 -args 'bus=5 address=0x29'
-minix-service up /service/tcs34725 -dev /dev/tcs34725b6s29 -label tcs34725.4.29 -args 'bus=6 address=0x29'
-minix-service up /service/tcs34725 -dev /dev/tcs34725b7s29 -label tcs34725.4.29 -args 'bus=7 address=0x29'
-minix-service up /service/tcs34725 -dev /dev/tcs34725b8s29 -label tcs34725.4.29 -args 'bus=8 address=0x29'
-minix-service up /service/tcs34725 -dev /dev/tcs34725b9s29 -label tcs34725.4.29 -args 'bus=9 address=0x29'
-minix-service up /service/tcs34725 -dev /dev/tcs34725b10s29 -label tcs34725.4.29 -args 'bus=10 address=0x29'
-minix-service up /service/tcs34725 -dev /dev/tcs34725b11s29 -label tcs34725.4.29 -args 'bus=11 address=0x29'
+minix-service up /service/tcs34725 -dev /dev/tcs34725b5s29 -label tcs34725.5.29 -args 'bus=5 address=0x29'
+minix-service up /service/tcs34725 -dev /dev/tcs34725b6s29 -label tcs34725.6.29 -args 'bus=6 address=0x29'
+minix-service up /service/tcs34725 -dev /dev/tcs34725b7s29 -label tcs34725.7.29 -args 'bus=7 address=0x29'
+minix-service up /service/tcs34725 -dev /dev/tcs34725b8s29 -label tcs34725.8.29 -args 'bus=8 address=0x29'
+minix-service up /service/tcs34725 -dev /dev/tcs34725b9s29 -label tcs34725.9.29 -args 'bus=9 address=0x29'
+minix-service up /service/tcs34725 -dev /dev/tcs34725b10s29 -label tcs34725.10.29 -args 'bus=10 address=0x29'
+minix-service up /service/tcs34725 -dev /dev/tcs34725b11s29 -label tcs34725.11.29 -args 'bus=11 address=0x29'

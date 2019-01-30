@@ -96,7 +96,18 @@
 ./etc/devmand/usb_storage.cfg                           minix-base
 ./etc/dhcpcd.conf                                       minix-base
 ./etc/eniac                                             minix-base
-./etc/eniac/colour_sensor_startup.sh                    minix-base
+./etc/eniac/colour_sensor                               minix-base
+./etc/eniac/colour_sensor/colour_sensor_hds             minix-base
+./etc/eniac/colour_sensor_startup                       minix-base
+./etc/eniac/colour_sensor/colour_sensor_hds/colour_sensor_hds minix-base
+./etc/eniac/GFSP                                        minix-base
+./etc/eniac/GFSP/data_structures.h                      minix-base
+./etc/eniac/GFSP/fsm_parser.c                           minix-base
+./etc/eniac/GFSP/fsm_parser.h                           minix-base
+./etc/eniac/GFSP/main.c                                 minix-base
+./etc/eniac/GFSP/ltsa                                   minix-base
+./etc/eniac/GFSP/ltsa/P1.aut                            minix-base
+./etc/eniac/GFSP/ltsa/P2.aut                            minix-base
 ./etc/fonts                                             minix-base      xorg
 ./etc/fonts/conf.avail                                  minix-base      xorg
 ./etc/fonts/conf.d                                      minix-base      xorg
